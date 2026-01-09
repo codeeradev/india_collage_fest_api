@@ -1,0 +1,9 @@
+{
+  "server_error":"Server error",
+
+  "success": "{value} added successfully",
+
+  "fetchSuccess": "{value} fetched successfully",
+
+  "updateSuccess": "{value} updated successfully"
+}

@@ -1,0 +1,27 @@
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
+
+const uploadDir = "assets/uploads";
+
+// auto-create folder
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir); // 🔥 FILE GOES HERE
+  },
+  filename: (req, file, cb) => {
+    const uniqueName =
+      Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, uniqueName + path.extname(file.originalname));
+  },
+});
+
+const upload = multer({ storage });
+
+module.exports = upload.fields([
+ { name: "image", maxCount: 1 },  
+]);
