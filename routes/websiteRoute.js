@@ -13,7 +13,7 @@ router.post("/add-event", upload, addEvent)
 router.get("/get-event", getEvent)
 router.get("/get-city-website", getCitiesWebsite)
 router.get("/get-category", getCategory), 
-router.get("/get-sub-category", getSubCategoriesByCategory), 
+router.get("/get-sub-category/:categoryId", getSubCategoriesByCategory), 
 
 
 module.exports = router;
