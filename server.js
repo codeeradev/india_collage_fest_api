@@ -6,7 +6,6 @@ const https = require("https");
 const http = require("http");
 const cors = require("cors");
 // const { initAgenda } = require('./config/agenda'); // ✅ your agenda setup
-connectDb();
 
 const app = express();
 app.use(cors());

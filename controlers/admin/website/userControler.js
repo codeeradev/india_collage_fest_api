@@ -1,14 +1,16 @@
 const User = require("../../../models/user");
-const OtpModel = require("../modals/otp");
-const { sendVerificationEmail } = require("../config/nodeMailer");
-const { otpTemplate } = require("../utils/emailTemplates");
+const OtpModel = require("../../../models/otp");
+const { sendVerificationEmail } = require("../../../config/nodeMailer");
+const { otpTemplate } = require("../../../utils/emailTemplates");
+const crypto = require("crypto");
+const message = require("../../../constants/messages.json");
 
 const type = "User";
 exports.registerUser = async (req, res) => {
   try {
-    const { name, roleId, location, phone, status, email } = req.body;
+    const { name, location, phone, status, email } = req.body;
 
-    await User.create({ name, roleId, location, phone, status, email });
+    await User.create({ name, roleId:4, location, phone, status, email });
     return res.status(200).json({
       message: message.success.replace("{value}", type),
     });
@@ -23,6 +25,10 @@ exports.loginUser = async (req, res) => {
     const { email } = req.body;
 
     const user = await User.findOne({ email });
+    console.log(user);
+    if (!user) {
+      return res.status(404).json({ message: "User Not Found" });
+    }
 
     let otp = crypto.randomInt(100000, 999999).toString();
 
