@@ -4,30 +4,17 @@ const { sendVerificationEmail } = require("../../../config/nodeMailer");
 const { otpTemplate } = require("../../../utils/emailTemplates");
 const crypto = require("crypto");
 const message = require("../../../constants/messages.json");
+const jwt = require("jsonwebtoken");
 
 const type = "User";
-exports.registerUser = async (req, res) => {
-  try {
-    const { name, location, phone, status, email } = req.body;
-
-    await User.create({ name, roleId:4, location, phone, status, email });
-    return res.status(200).json({
-      message: message.success.replace("{value}", type),
-    });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: message.server_error });
-  }
-};
 
 exports.loginUser = async (req, res) => {
   try {
     const { email } = req.body;
 
     const user = await User.findOne({ email });
-    console.log(user);
     if (!user) {
-      return res.status(404).json({ message: "User Not Found" });
+      await User.create({ email, isVerified: false, roleId: 4 });
     }
 
     let otp = crypto.randomInt(100000, 999999).toString();
@@ -35,12 +22,12 @@ exports.loginUser = async (req, res) => {
     await OtpModel.create({
       email,
       otp,
-      expiresAt: Date.now() + 2 * 60 * 1000,
+      expiresAt: Date.now() + 5 * 60 * 1000,
     });
     await sendVerificationEmail(
       email,
       "🔐 OTP Verification – India College Fest",
-      otpTemplate(otp)
+      otpTemplate(otp),
     );
 
     return res.status(200).json({ message: "OTP sent via to Email" });
@@ -76,6 +63,8 @@ exports.verifyOtp = async (req, res) => {
     // Email verification
     if (!user.email_verified_at) {
       updates.email_verified_at = new Date(); // stored in UTC
+      user.isVerified = true;
+      user.status = true;
     }
 
     // (Optional) Phone verification
@@ -93,17 +82,76 @@ exports.verifyOtp = async (req, res) => {
     await OtpModel.deleteOne({ _id: otpRecord._id });
 
     // 6️⃣ Generate JWT
-    const jwttoken = jwt.sign({ _id: user._id }, process.env.jwtSecretKey, {
+    const jwttoken = jwt.sign({ _id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "1d",
     });
 
     return res.status(200).json({
       message: "Login successful",
       user_id: user._id,
+      user: user,
       token: jwttoken,
     });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: message.server_error });
+  }
+};
+
+exports.becomeAOrganiser = async (req, res) => {
+  try {
+    const {
+      name,
+      location,
+      phone,
+      email,
+      image,
+    } = req.body;
+
+    const user = await User.findOne({
+      $or: [{ email }, { phone }],
+      email_verified_at: { $ne: null }
+    });
+
+    if (user) {
+      return res.status(409).json({
+        message: "User already exists"
+      });
+    }
+
+    const otp = crypto.randomInt(100000, 999999).toString();
+
+    await OtpModel.create({
+      email,
+      otp,
+      expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes
+    });
+
+    await sendVerificationEmail(
+      email,
+      "🔐 OTP Verification – India College Fest",
+      otpTemplate(otp)
+    );
+
+    await User.create({
+      name,
+      roleId:3,
+      location,
+      phone,
+      status:false,
+      email,
+      image,
+      events:0,
+    });
+
+    return res.status(201).json({
+      message: "OTP sent successfully"
+    });
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: message.server_error
+    });
   }
 };

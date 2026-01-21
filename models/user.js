@@ -10,6 +10,8 @@ const userSchema = new mongoose.Schema(
     email: String,
     email_verified_at: { type: Date, default: null },
     phone_verified_at: { type: Date, default: null },
+    image:String,
+    events:Number,
   },
   { timestamps: true }
 );

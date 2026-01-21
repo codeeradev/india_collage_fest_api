@@ -1,6 +1,8 @@
 const Category = require("../../models/category");
 const SubCategory = require("../../models/subCategory");
 const message = require("../../constants/messages.json");
+const Event = require("../../models/event");
+const User = require("../../models/user");
 
 const type = "category";
 
@@ -112,7 +114,22 @@ exports.getSubCategoriesByCategory = async (req, res) => {
 
 exports.editEvents = async (req, res) => {
   try {
-    const { eventId } = req.params; // assuming eventId comes from params
+    const { eventId } = req.params;
+
+    const userId = req.user;
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    // ❌ normal user not allowed
+    if (![1, 3].includes(user.roleId)) {
+      return res.status(403).json({
+        message: "Access denied",
+      });
+    }
 
     const updateData = { ...req.body };
 
@@ -123,13 +140,13 @@ exports.editEvents = async (req, res) => {
 
     // Remove undefined values (important)
     Object.keys(updateData).forEach(
-      (key) => updateData[key] === undefined && delete updateData[key]
+      (key) => updateData[key] === undefined && delete updateData[key],
     );
 
     const updatedEvent = await Event.findByIdAndUpdate(
       eventId,
       { $set: updateData },
-      { new: true }
+      { new: true },
     );
 
     if (!updatedEvent) {
@@ -143,5 +160,77 @@ exports.editEvents = async (req, res) => {
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: message.server_error });
+  }
+};
+
+exports.getEvent = async (req, res) => {
+  try {
+    const { cityId, category, search, eventId } = req.query;
+
+    // pagination params
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    let filter = {};
+
+    if (eventId) {
+      filter._id = eventId;
+    }
+
+    if (search) {
+      filter.title = { $regex: search, $options: "i" };
+    }
+
+    if (cityId) {
+      filter.location = cityId;
+    }
+
+    if (category) {
+      filter.category = category;
+    }
+
+    // total count
+    const totalEvents = await Event.countDocuments(filter);
+
+    // fetch paginated data
+    const events = await Event.find(filter)
+      .populate({
+        path: "location",
+        select: "_id city",
+      })
+      .populate({
+        path: "category",
+        select: "_id name icon",
+      })
+      .populate({
+        path: "sub_category",
+        select: "_id name icon",
+      })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const totalPages = Math.ceil(totalEvents / limit);
+
+    return res.status(200).json({
+      message: message.fetchSuccess.replace("{value}", type),
+
+      pagination: {
+        totalRecords: totalEvents,
+        totalPages,
+        currentPage: page,
+        limit,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+
+      events,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: message.server_error,
+    });
   }
 };
