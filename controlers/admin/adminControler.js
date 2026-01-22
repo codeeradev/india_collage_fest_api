@@ -234,3 +234,22 @@ exports.getEvent = async (req, res) => {
     });
   }
 };
+
+exports.loginUser = async (req, res) => {
+  try {
+    const ALLOWED_ROLES = [1, 2, 3];
+    const { email } = req.body;
+
+    const user = await User.findOne({ email, $roleId: { $in: ALLOWED_ROLES } });
+    if (!user) {
+      return res.status(403).json({
+        message: "Access denied. Admin or Organizer only.",
+      });
+    }
+
+    return res.status(200).json({ message: "Login Successfull", user });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: message.server_error });
+  }
+};

@@ -12,7 +12,7 @@ exports.loginUser = async (req, res) => {
   try {
     const { email } = req.body;
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email, roleId: 4 });
     if (!user) {
       await User.create({ email, isVerified: false, roleId: 4 });
     }
@@ -72,9 +72,18 @@ exports.verifyOtp = async (req, res) => {
       updates.phone_verified_at = new Date();
     }
 
-    // Activate user
-    updates.status = true;
+    if (user.roleId === 4) {
+      // Activate user
+      updates.status = true;
+    }
 
+    if (user.roleId === 3) {
+      await AdminApproval.create({
+        userId: user._id,
+        type: "ORGANIZER",
+        status: "PENDING",
+      });
+    }
     // 4️⃣ Update user
     await User.updateOne({ _id: user._id }, { $set: updates });
 
@@ -87,7 +96,11 @@ exports.verifyOtp = async (req, res) => {
     });
 
     return res.status(200).json({
-      message: "Login successful",
+      message:
+        user.roleId === 3
+          ? "OTP verified. Waiting for admin approval."
+          : "Login successful",
+
       user_id: user._id,
       user: user,
       token: jwttoken,
@@ -100,22 +113,16 @@ exports.verifyOtp = async (req, res) => {
 
 exports.becomeAOrganiser = async (req, res) => {
   try {
-    const {
-      name,
-      location,
-      phone,
-      email,
-      image,
-    } = req.body;
+    const { name, location, phone, email, image } = req.body;
 
     const user = await User.findOne({
       $or: [{ email }, { phone }],
-      email_verified_at: { $ne: null }
+      email_verified_at: { $ne: null },
     });
 
     if (user) {
       return res.status(409).json({
-        message: "User already exists"
+        message: "User already exists",
       });
     }
 
@@ -124,34 +131,33 @@ exports.becomeAOrganiser = async (req, res) => {
     await OtpModel.create({
       email,
       otp,
-      expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes
+      expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes
     });
 
     await sendVerificationEmail(
       email,
       "🔐 OTP Verification – India College Fest",
-      otpTemplate(otp)
+      otpTemplate(otp),
     );
 
     await User.create({
       name,
-      roleId:3,
+      roleId: 3,
       location,
       phone,
-      status:false,
+      status: false,
       email,
       image,
-      events:0,
+      events: 0,
     });
 
     return res.status(201).json({
-      message: "OTP sent successfully"
+      message: "OTP sent successfully",
     });
-
   } catch (error) {
     console.error(error);
     return res.status(500).json({
-      message: message.server_error
+      message: message.server_error,
     });
   }
 };
