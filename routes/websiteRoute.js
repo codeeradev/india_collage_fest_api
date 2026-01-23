@@ -13,7 +13,7 @@ router.post("/add-event", verifyToken, upload, addEvent)
 router.post("/login", loginUser),
 router.post("/verify-otp", verifyOtp),
 
-router.post("/become-a-organiser", becomeAOrganiser),
+router.post("/become-a-organiser", upload, becomeAOrganiser),
 
 router.get("/get-event", getEvent)
 router.get("/get-city-website", getCitiesWebsite)

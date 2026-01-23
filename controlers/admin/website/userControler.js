@@ -1,5 +1,6 @@
 const User = require("../../../models/user");
 const OtpModel = require("../../../models/otp");
+const AdminApproval = require("../../../models/adminApproval");
 const { sendVerificationEmail } = require("../../../config/nodeMailer");
 const { otpTemplate } = require("../../../utils/emailTemplates");
 const crypto = require("crypto");
@@ -64,7 +65,6 @@ exports.verifyOtp = async (req, res) => {
     if (!user.email_verified_at) {
       updates.email_verified_at = new Date(); // stored in UTC
       user.isVerified = true;
-      user.status = true;
     }
 
     // (Optional) Phone verification
@@ -79,9 +79,8 @@ exports.verifyOtp = async (req, res) => {
 
     if (user.roleId === 3) {
       await AdminApproval.create({
-        userId: user._id,
+        user_id: user._id,
         type: "ORGANIZER",
-        status: "PENDING",
       });
     }
     // 4️⃣ Update user
@@ -113,7 +112,7 @@ exports.verifyOtp = async (req, res) => {
 
 exports.becomeAOrganiser = async (req, res) => {
   try {
-    const { name, location, phone, email, image } = req.body;
+    const { name, location, phone, email } = req.body;
 
     const user = await User.findOne({
       $or: [{ email }, { phone }],
@@ -126,6 +125,10 @@ exports.becomeAOrganiser = async (req, res) => {
       });
     }
 
+    const image = req.files?.image?.[0]?.filename
+      ? `/assets/uploads/${req.files.image[0].filename}`
+      : null;
+      
     const otp = crypto.randomInt(100000, 999999).toString();
 
     await OtpModel.create({
