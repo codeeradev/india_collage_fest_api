@@ -164,3 +164,27 @@ exports.becomeAOrganiser = async (req, res) => {
     });
   }
 };
+
+exports.getOrganiser = async (req, res) => {
+  try {
+
+    const organisers = await User.find({
+      roleId: 3,
+      status: true
+    })
+    .select("-password -otp -__v")
+    .sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      message: "Organisers fetched successfully",
+      total: organisers.length,
+      organisers
+    });
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: "Server error"
+    });
+  }
+};

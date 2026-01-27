@@ -58,7 +58,7 @@ exports.addEvent = async (req, res) => {
 
 exports.getEvent = async (req, res) => {
   try {
-    const { eventId } = req.query;
+    const { eventId, isFeatured } = req.query;
 
     // pagination params
     const page = parseInt(req.query.page) || 1;
@@ -67,6 +67,10 @@ exports.getEvent = async (req, res) => {
 
     // filter object
     let filter = { visibility: true };
+
+    if (isFeatured !== undefined) {
+      filter.isFeatured = isFeatured === "true";
+    }
 
     if (eventId) {
       filter._id = eventId;

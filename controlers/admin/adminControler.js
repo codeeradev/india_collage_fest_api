@@ -4,6 +4,10 @@ const message = require("../../constants/messages.json");
 const Event = require("../../models/event");
 const User = require("../../models/user");
 const AdminApproval = require("../../models/adminApproval");
+const generateRandomPassword = require("../../utils/istConverter");
+const { sendVerificationEmail } = require("../../config/nodeMailer");
+const { organiserCredentialsTemplate } = require("../../utils/emailTemplates");
+const jwt = require("jsonwebtoken");
 
 const type = "category";
 
@@ -236,22 +240,68 @@ exports.getEvent = async (req, res) => {
   }
 };
 
-exports.loginUser = async (req, res) => {
+exports.loginPanel = async (req, res) => {
   try {
     const ALLOWED_ROLES = [1, 2, 3];
-    const { email } = req.body;
 
-    const user = await User.findOne({ email, $roleId: { $in: ALLOWED_ROLES } });
-    if (!user) {
-      return res.status(403).json({
-        message: "Access denied. Admin or Organizer only.",
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        message: "Email and password are required",
       });
     }
 
-    return res.status(200).json({ message: "Login Successfull", user });
+    const user = await User.findOne({
+      email,
+      roleId: { $in: ALLOWED_ROLES },
+    });
+
+    if (!user) {
+      return res.status(403).json({
+        message: "Access denied",
+      });
+    }
+
+    if (!user.status) {
+      return res.status(403).json({
+        message: "Account is disabled by admin",
+      });
+    }
+
+    // ✅ plain password match
+    if (user.password !== password) {
+      return res.status(401).json({
+        message: "Invalid email or password",
+      });
+    }
+
+    // ✅ generate jwt token
+    const token = jwt.sign(
+      {
+        _id: user._id,
+        roleId: user.roleId,
+        email: user.email,
+      },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "7d",
+      },
+    );
+
+    // hide password in response
+    user.password = undefined;
+
+    return res.status(200).json({
+      message: "Login successful",
+      token,
+      user,
+    });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: message.server_error });
+    return res.status(500).json({
+      message: "Server error",
+    });
   }
 };
 
@@ -261,25 +311,115 @@ exports.getApprovalsRequest = async (req, res) => {
 
     // query params are strings
     if (organiser === "true") {
-
       const organiserRequests = await AdminApproval.find({
-        type: "organiser"
-      });
+        type: "ORGANIZER",
+        status: "pending",
+      })
+        .populate(
+          "user_id",
+          "name email phone image status roleId location createdAt",
+        )
+        .sort({ createdAt: -1 });
 
       return res.status(200).json({
         message: "Organiser approval requests fetched successfully",
-        organiserRequests
+        organiserRequests,
       });
     }
 
     return res.status(400).json({
-      message: "Invalid request"
+      message: "Invalid request",
     });
-
   } catch (error) {
     console.error(error);
     return res.status(500).json({
-      message: "Server error"
+      message: "Server error",
+    });
+  }
+};
+
+exports.approvalAction = async (req, res) => {
+  try {
+    const { approvalId, action, reason } = req.body;
+
+    if (!approvalId || !action) {
+      return res.status(400).json({
+        message: "approvalId and action are required",
+      });
+    }
+
+    if (!["approved", "rejected"].includes(action)) {
+      return res.status(400).json({
+        message: "Action must be approved or rejected",
+      });
+    }
+
+    const approval = await AdminApproval.findById(approvalId);
+
+    if (!approval) {
+      return res.status(404).json({
+        message: "Approval request not found",
+      });
+    }
+
+    if (approval.status !== "pending") {
+      return res.status(400).json({
+        message: "Request already processed",
+      });
+    }
+
+    // ======================
+    // APPROVE
+    // ======================
+    if (action === "approved") {
+      const plainPassword = generateRandomPassword(10);
+
+      approval.status = "approved";
+      approval.reason = null;
+      approval.approvedAt = new Date();
+      approval.approvedBy = req.admin?._id || null;
+
+      await approval.save();
+
+      const user = await User.findByIdAndUpdate(
+        approval.user_id,
+        {
+          roleId: 3,
+          status: true,
+          password: plainPassword,
+        },
+        { new: true },
+      );
+
+      await sendVerificationEmail(
+        user.email,
+        "Organizer Account Approved – India College Fest",
+        organiserCredentialsTemplate(user.email, user.name, plainPassword),
+      );
+
+      return res.status(200).json({
+        message: "Organizer approved successfully",
+      });
+    }
+
+    // ======================
+    // REJECT
+    // ======================
+    if (action === "rejected") {
+      approval.status = "rejected";
+      approval.reason = reason || "Rejected by admin";
+      approval.rejectedAt = new Date();
+
+      await approval.save();
+
+      return res.status(200).json({
+        message: "Organizer request rejected",
+      });
+    }
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: "Server error",
     });
   }
 };
