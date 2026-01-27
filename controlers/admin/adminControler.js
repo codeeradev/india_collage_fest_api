@@ -3,6 +3,7 @@ const SubCategory = require("../../models/subCategory");
 const message = require("../../constants/messages.json");
 const Event = require("../../models/event");
 const User = require("../../models/user");
+const AdminApproval = require("../../models/adminApproval");
 
 const type = "category";
 
@@ -251,5 +252,34 @@ exports.loginUser = async (req, res) => {
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: message.server_error });
+  }
+};
+
+exports.getApprovalsRequest = async (req, res) => {
+  try {
+    const { organiser } = req.query;
+
+    // query params are strings
+    if (organiser === "true") {
+
+      const organiserRequests = await AdminApproval.find({
+        type: "organiser"
+      });
+
+      return res.status(200).json({
+        message: "Organiser approval requests fetched successfully",
+        organiserRequests
+      });
+    }
+
+    return res.status(400).json({
+      message: "Invalid request"
+    });
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: "Server error"
+    });
   }
 };
