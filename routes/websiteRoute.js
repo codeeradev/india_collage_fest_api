@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const verifyToken = require("../middleware/verifyAuth");
 
-const { loginUser, verifyOtp, becomeAOrganiser, getOrganiser } = require('../controlers/admin/website/userControler');
+const { loginUser, verifyOtp, becomeAOrganiser, getOrganiser, getOrganiserEvents } = require('../controlers/admin/website/userControler');
 
 const { getCategory, getSubCategoriesByCategory } = require('../controlers/admin/website/categoryControler');
 const { addEvent, getEvent, getCitiesWebsite } = require('../controlers/admin/website/websiteControler');
@@ -16,6 +16,7 @@ router.post("/verify-otp", verifyOtp),
 router.post("/become-a-organiser", upload, becomeAOrganiser),
 
 router.get("/get-organiser", getOrganiser)
+router.get("/get-organiser-event", getOrganiserEvents)
 router.get("/get-event", getEvent)
 router.get("/get-city-website", getCitiesWebsite)
 router.get("/get-category", getCategory), 

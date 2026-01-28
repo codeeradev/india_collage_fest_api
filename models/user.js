@@ -12,6 +12,7 @@ const userSchema = new mongoose.Schema(
     phone_verified_at: { type: Date, default: null },
     image:String,
     password:String,
+    bannerImage:String,
     events:Number,
   },
   { timestamps: true }

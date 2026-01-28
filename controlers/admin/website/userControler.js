@@ -1,6 +1,7 @@
 const User = require("../../../models/user");
 const OtpModel = require("../../../models/otp");
 const AdminApproval = require("../../../models/adminApproval");
+const Event = require("../../../models/event");
 const { sendVerificationEmail } = require("../../../config/nodeMailer");
 const { otpTemplate } = require("../../../utils/emailTemplates");
 const crypto = require("crypto");
@@ -186,5 +187,43 @@ exports.getOrganiser = async (req, res) => {
     return res.status(500).json({
       message: "Server error"
     });
+  }
+};
+
+exports.getOrganiserEvents = async (req, res) => {
+  try {
+    const { organiser } = req.query;
+
+    if (!organiser) {
+      return res.status(400).json({
+        message: "Organiser id required",
+      });
+    }
+
+    // 👤 organiser info
+    const organiserData = await User.findById(organiser)
+      .select("name image bannerImage events");
+
+    if (!organiserData) {
+      return res.status(404).json({
+        message: "Organiser not found",
+      });
+    }
+
+    // 🎫 organiser events
+    const events = await Event.find({
+      user_id: organiser,
+      visibility: true,
+    })
+      .sort({ createdAt: -1 })
+      .limit(20);
+
+    res.status(200).json({
+      organiser: organiserData,
+      events,
+    });
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ message: "Server error" });
   }
 };

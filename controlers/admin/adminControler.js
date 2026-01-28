@@ -423,3 +423,81 @@ exports.approvalAction = async (req, res) => {
     });
   }
 };
+
+exports.editProfile = async (req, res) => {
+  try {
+    const userId = req.user;
+
+    const { name, phone, location, password } = req.body;
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        status: false,
+        message: "User not found",
+      });
+    }
+
+    if (!user.phone_verified_at && phone) {
+      user.phone = phone;
+    }
+
+    if (name) user.name = name;
+    if (location) user.location = location;
+    if (password) user.password = password;
+
+    /** image upload */
+    if (req.files?.image) {
+      user.image = `/assets/uploads/${req.files.image[0].filename}`;
+    }
+
+    if (req.files?.bannerImage) {
+      user.bannerImage = `/assets/uploads/${req.files.bannerImage[0].filename}`;
+    }
+
+    await user.save();
+
+    res.status(200).json({
+      status: true,
+      message: "Profile updated successfully",
+      data: user,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      status: false,
+      message: "Server error",
+    });
+  }
+};
+
+exports.getProfile = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const profile = await User.findOne({
+      _id: userId,
+      roleId: { $nin: [4, 5] },
+      status: true
+    })
+      .select("-password -otp -__v");
+
+    if (!profile) {
+      return res.status(404).json({
+        message: "Profile not found"
+      });
+    }
+
+    return res.status(200).json({
+      message: "Profile fetched successfully",
+      profile
+    });
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: "Server error"
+    });
+  }
+};
