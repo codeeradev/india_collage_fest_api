@@ -4,18 +4,27 @@ const userSchema = new mongoose.Schema(
   {
     name: String,
     roleId: Number,
-    location: {type:mongoose.Types.ObjectId, ref:'city'},
+    location: { type: mongoose.Types.ObjectId, ref: "city" },
     phone: Number, // it is without +91 or u can say country code
     status: Boolean,
     email: String,
     email_verified_at: { type: Date, default: null },
     phone_verified_at: { type: Date, default: null },
-    image:String,
-    password:String,
-    bannerImage:String,
-    events:Number,
+    image: String,
+    password: String,
+    bannerImage: String,
+    events: Number,
+    mouSigned: {
+      type: Boolean,
+      default: false,
+    },
+    mouId: {
+      type: mongoose.Types.ObjectId,
+      ref: "mou",
+      default: null,
+    },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 module.exports = mongoose.model("user", userSchema);

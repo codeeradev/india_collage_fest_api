@@ -429,9 +429,7 @@ exports.editProfile = async (req, res) => {
     const userId = req.user;
 
     const { name, phone, location, password } = req.body;
-
     const user = await User.findById(userId);
-
     if (!user) {
       return res.status(404).json({
         status: false,
@@ -479,25 +477,27 @@ exports.getProfile = async (req, res) => {
     const profile = await User.findOne({
       _id: userId,
       roleId: { $nin: [4, 5] },
-      status: true
+      status: true,
     })
-      .select("-password -otp -__v");
-
+      .select("-otp -__v")
+      .populate({
+        path: "location",
+        select: "_id city",
+      });
     if (!profile) {
       return res.status(404).json({
-        message: "Profile not found"
+        message: "Profile not found",
       });
     }
 
     return res.status(200).json({
       message: "Profile fetched successfully",
-      profile
+      profile,
     });
-
   } catch (error) {
     console.error(error);
     return res.status(500).json({
-      message: "Server error"
+      message: "Server error",
     });
   }
 };

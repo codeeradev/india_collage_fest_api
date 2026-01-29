@@ -6,6 +6,7 @@ const { sendVerificationEmail } = require("../../../config/nodeMailer");
 const { otpTemplate } = require("../../../utils/emailTemplates");
 const crypto = require("crypto");
 const message = require("../../../constants/messages.json");
+const MOU = require("../../../models/mou");
 const jwt = require("jsonwebtoken");
 
 const type = "User";
@@ -57,6 +58,22 @@ exports.verifyOtp = async (req, res) => {
 
     if (!otpRecord) {
       return res.status(400).json({ message: "Invalid OTP" });
+    }
+
+    if (user.roleId === 3 && !user.mouId) {
+      const mouCount = await MOU.countDocuments();
+
+      const mou = await MOU.create({
+        organizationId: user._id,
+        mouNumber: `MOU-${new Date().getFullYear()}-${String(
+          mouCount + 1,
+        ).padStart(5, "0")}`,
+      });
+
+      user.mouId = mou._id;
+      user.mouSigned = false;
+
+      await user.save();
     }
 
     // 3️⃣ Prepare update object
@@ -129,7 +146,7 @@ exports.becomeAOrganiser = async (req, res) => {
     const image = req.files?.image?.[0]?.filename
       ? `/assets/uploads/${req.files.image[0].filename}`
       : null;
-      
+
     const otp = crypto.randomInt(100000, 999999).toString();
 
     await OtpModel.create({
@@ -168,24 +185,22 @@ exports.becomeAOrganiser = async (req, res) => {
 
 exports.getOrganiser = async (req, res) => {
   try {
-
     const organisers = await User.find({
       roleId: 3,
-      status: true
+      status: true,
     })
-    .select("-password -otp -__v")
-    .sort({ createdAt: -1 });
+      .select("-password -otp -__v")
+      .sort({ createdAt: -1 });
 
     return res.status(200).json({
       message: "Organisers fetched successfully",
       total: organisers.length,
-      organisers
+      organisers,
     });
-
   } catch (error) {
     console.error(error);
     return res.status(500).json({
-      message: "Server error"
+      message: "Server error",
     });
   }
 };
@@ -201,8 +216,9 @@ exports.getOrganiserEvents = async (req, res) => {
     }
 
     // 👤 organiser info
-    const organiserData = await User.findById(organiser)
-      .select("name image bannerImage events");
+    const organiserData = await User.findById(organiser).select(
+      "name image bannerImage events",
+    );
 
     if (!organiserData) {
       return res.status(404).json({
@@ -223,7 +239,7 @@ exports.getOrganiserEvents = async (req, res) => {
       events,
     });
   } catch (err) {
-    console.error(err)
+    console.error(err);
     res.status(500).json({ message: "Server error" });
   }
 };
