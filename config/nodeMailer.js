@@ -1,25 +1,40 @@
 const nodemailer = require("nodemailer");
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com", // Or use the server IP if given: 172.93.223.239
+  host: "smtp.hostinger.com", // Or use the server IP if given: 172.93.223.239
   port: 587, // Use 465 for SSL (recommended)
   secure: false, // true for port 465, false for 587
   auth: {
-    user: "fivliaindia@gmail.com", // Your no-reply email
-    pass: "xybmyypjxwyeldgl",
+    user: "goutam@codeeratech.in", // Your no-reply email
+    pass: "Goutam@2025!",
   },
-    tls: {
+  tls: {
     rejectUnauthorized: false,
   },
-
 });
 
-const sendVerificationEmail = async (to, subject, html) => {
-  await transporter.sendMail({
-    from: "India College Fest <fivliaindia@gmail.com>",
+const sendVerificationEmail = async (
+  to,
+  subject,
+  html,
+  attachmentPath = null,
+) => {
+  const mail = {
+    from: "India College Fest <goutam@codeeratech.in>",
     to,
     subject,
     html,
-  });
+  };
+
+  if (attachmentPath) {
+    mail.attachments = [
+      {
+        filename: "Signed-MOU.pdf",
+        path: attachmentPath,
+      },
+    ];
+  }
+
+  await transporter.sendMail(mail);
 };
 
 module.exports = {

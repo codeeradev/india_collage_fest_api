@@ -1,27 +1,25 @@
-const mongoose = require("mongoose");
 const crypto = require("crypto");
 
 const MOU = require("../../models/mou")
 const User = require("../../models/user");
 
-const sendVerificationEmail = require("../../config/nodeMailer");
-const otpTemplate = require("../../utils/emailTemplates");
+const {sendVerificationEmail} = require("../../config/nodeMailer");
+const {otpTemplate} = require("../../utils/emailTemplates");
+const generateSignedPdf = require("../../utils/generateSignedMouPdf");
+const Otp = require("../../models/otp");
 
 exports.getMyMou = async (req, res) => {
   const mou = await MOU.findOne({
-    organizationId: req.user,
+    organizationId: req.user
   });
 
   if (!mou) {
     return res.status(404).json({
-      message: "MOU not found",
+      message: "MOU not found"
     });
   }
 
-  res.status(200).json({
-    status: true,
-    data: mou,
-  });
+  res.json({ data: mou });
 };
 
 exports.sendMouOtp = async (req, res) => {
@@ -29,68 +27,87 @@ exports.sendMouOtp = async (req, res) => {
     organizationId: req.user,
   });
 
-  if (!mou) {
-    return res.status(404).json({
-      message: "MOU not found",
-    });
-  }
+  if (!mou)
+    return res.status(404).json({ message: "MOU not found" });
 
-  if (mou.status === "signed") {
-    return res.status(400).json({
-      message: "MOU already signed",
-    });
-  }
+  if (mou.status === "signed")
+    return res.status(400).json({ message: "MOU already signed" });
+
+  // remove old otp
+  await Otp.deleteMany({ email: req.user.email });
 
   const otp = crypto.randomInt(100000, 999999).toString();
 
-  mou.otp = otp;
-  mou.otpExpiresAt = Date.now() + 5 * 60 * 1000;
-  mou.status = "otp_sent";
+  await Otp.create({
+    email: req.user.email,
+    otp,
+    expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+  });
 
+  mou.status = "otp_sent";
   await mou.save();
 
-  // send otp on organizer email
   await sendVerificationEmail(
     req.user.email,
     "MOU Signing OTP",
     otpTemplate(otp)
   );
 
-  return res.json({
-    message: "OTP sent for MOU signing",
-  });
+  res.json({ message: "OTP sent successfully" });
 };
+
 
 exports.verifyMouOtp = async (req, res) => {
   const { otp } = req.body;
 
-  const mou = await MOU.findOne({
-    organizationId: req.user,
+  const otpRecord = await Otp.findOne({
+    email: req.user.email,
     otp,
-    otpExpiresAt: { $gt: Date.now() },
   });
 
-  if (!mou) {
+  if (!otpRecord)
     return res.status(400).json({
       message: "Invalid or expired OTP",
     });
-  }
+
+  const mou = await MOU.findOne({
+    organizationId: req.user,
+  });
+
+  if (!mou)
+    return res.status(404).json({
+      message: "MOU not found",
+    });
+
+  const signedPdf = await generateSignedPdf({
+    name: req.user.name,
+    email: req.user.email,
+    mouNumber: mou.mouNumber,
+  });
 
   mou.status = "signed";
   mou.signedAt = new Date();
-  mou.otp = null;
-  mou.otpExpiresAt = null;
+  mou.signedPdfUrl = '/' + signedPdf.replace(/^\/+/, '');
 
   await mou.save();
 
   await User.updateOne(
     { _id: req.user },
-    {
-      mouSigned: true,
-    }
+    { mouSigned: true }
   );
 
-  return res.json({
+  // delete OTP (one-time)
+  await Otp.deleteOne({ _id: otpRecord._id });
+
+  // email signed copy
+  await sendVerificationEmail(
+    req.user.email,
+    "Signed MOU Copy",
+    "Attached is your signed MOU.",
+    signedPdf
+  );
+
+  res.json({
     message: "MOU signed successfully",
   });
 };

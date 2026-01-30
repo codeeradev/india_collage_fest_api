@@ -168,4 +168,97 @@ const organiserCredentialsTemplate = (email, name, password) => `
 </html>
 `;
 
-module.exports = { otpTemplate,organiserCredentialsTemplate };
+const mouTemplate = ({ name, email, date, signedAt }) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 13px;
+      color: #222;
+      line-height: 1.6;
+    }
+
+    .container {
+      width: 90%;
+      margin: auto;
+    }
+
+    .title {
+      text-align: center;
+      font-size: 22px;
+      font-weight: bold;
+      margin-bottom: 30px;
+      text-transform: uppercase;
+    }
+
+    .section {
+      margin-bottom: 20px;
+    }
+
+    .signature {
+      margin-top: 40px;
+    }
+
+    .footer {
+      margin-top: 50px;
+      font-size: 11px;
+      color: #666;
+      border-top: 1px solid #ddd;
+      padding-top: 10px;
+    }
+
+    ul {
+      margin-left: 20px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+
+    <div class="title">
+      Memorandum of Understanding (MOU)
+    </div>
+
+    <div class="section">
+      This Memorandum of Understanding ("Agreement") is entered on
+      <b>${date}</b> between:
+    </div>
+
+    <div class="section">
+      <b>Organizer:</b><br/>
+      Name: ${name}<br/>
+      Email: ${email}
+    </div>
+
+    <div class="section">
+      By electronically signing this agreement, the Organizer agrees to the
+      following terms:
+    </div>
+
+    <ul>
+      <li>The platform acts only as a technology provider.</li>
+      <li>The platform bears no financial responsibility.</li>
+      <li>All disputes are solely between event organizers and participants.</li>
+      <li>OTP-based digital consent is legally valid under the IT Act, 2000.</li>
+      <li>This agreement is binding once digitally signed.</li>
+    </ul>
+
+    <div class="signature">
+      <b>Organizer Signature:</b><br/>
+      Digitally signed via OTP verification.
+    </div>
+
+    <div class="footer">
+      Signed At: ${signedAt || "-"} <br/>
+      This is a system generated document. No physical signature required.
+    </div>
+
+  </div>
+</body>
+</html>
+`;
+
+module.exports = { otpTemplate, organiserCredentialsTemplate, mouTemplate };

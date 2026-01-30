@@ -19,18 +19,10 @@ const mouSchema = new mongoose.Schema(
       default: "draft",
     },
 
-    pdfUrl: {
-      type: String,
-      default: null,
-    },
-
     signedPdfUrl: {
       type: String,
       default: null,
     },
-
-    contentHtml: String, // frozen HTML
-    contentText: String,
 
     signedAt: Date,
 
@@ -38,7 +30,6 @@ const mouSchema = new mongoose.Schema(
       userId: mongoose.Schema.Types.ObjectId,
       name: String,
       email: String,
-      ipAddress: String,
     },
   },
   { timestamps: true },

@@ -16,6 +16,9 @@ const {
   getProfile,
 } = require("../controlers/admin/adminControler");
 
+
+const {previewMouPdf} = require("../utils/mouPdf")
+
 const {
   addCity,
   getCity,
@@ -54,5 +57,7 @@ router.get("/get-approvals-request", getApprovalsRequest);
 
 router.get("/get-sub-category/:categoryId", getSubCategoriesByCategory);
 router.get("/organizer/mou", verifyToken, getMyMou);
+router.get("/organizer/mou/preview", verifyToken, previewMouPdf);
+
 
 module.exports = router;
