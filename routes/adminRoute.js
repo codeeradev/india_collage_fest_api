@@ -4,8 +4,10 @@ const verifyToken = require("../middleware/verifyAuth");
 const {requireMouSigned} = require("../middleware/mouVerification")
 const {
   addCategory,
+  editCategory,
   getCategory,
   addSubCategory,
+  editSubCategory,
   getSubCategoriesByCategory,
   editEvents,
   getEvent,
@@ -14,6 +16,7 @@ const {
   approvalAction,
   editProfile,
   getProfile,
+  getUsers
 } = require("../controlers/admin/adminControler");
 
 
@@ -35,7 +38,9 @@ const upload = require("../middleware/upload");
 router.post("/login-panel", loginPanel);
 router.post("/edit-profile", verifyToken, upload, editProfile);
 router.post("/add-category", upload, addCategory);
+router.post("/edit-category/:id", upload, editCategory);
 router.post("/add-sub-category", upload, addSubCategory);
+router.post("/edit-sub-category/:id", upload, editSubCategory);
 router.post("/add-city", addCity);
 router.post("/edit-city/:cityId", editCity);
 router.post("/editEvents/:eventId", upload, verifyToken, requireMouSigned, editEvents);
@@ -51,6 +56,7 @@ router.get("/get-city", getCity);
 router.get("/get-event", getEvent);
 router.get("/get-profile/:userId", getProfile);
 
+router.get("/get-users", getUsers);
 router.get("/get-event", getEvent);
 
 router.get("/get-approvals-request", getApprovalsRequest);

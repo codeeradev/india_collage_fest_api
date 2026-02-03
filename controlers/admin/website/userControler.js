@@ -243,3 +243,90 @@ exports.getOrganiserEvents = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+exports.getUserProfile = async (req, res) => {
+  try {
+    const userId = req.user;
+
+    const profile = await User.findOne({
+      _id: userId,
+      roleId: { $nin: [1, 2, 3] },
+      status: true,
+    })
+      .select("-otp -__v")
+      .populate({
+        path: "location",
+        select: "_id city",
+      });
+    if (!profile) {
+      return res.status(404).json({
+        message: "Profile not found",
+      });
+    }
+
+    return res.status(200).json({
+      message: "Profile fetched successfully",
+      profile,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: "Server error",
+    });
+  }
+};
+
+exports.updateUserProfile = async (req, res) => {
+  try {
+    const userId = req.user;
+
+    // Allowed fields
+    const allowedFields = ["name", "location", "phone", "email", "image"];
+
+    // Build update object dynamically
+    const updateDetails = {};
+    allowedFields.forEach((field) => {
+      if (req.body[field] !== undefined) {
+        updateDetails[field] = req.body[field];
+      }
+    });
+
+    if (req.files?.image) {
+      updateDetails.image = `/assets/uploads/${req.files.image[0].filename}`;
+    }
+
+    // If nothing to update
+    if (Object.keys(updateDetails).length === 0) {
+      return res.status(400).json({
+        message: "No valid fields provided for update",
+      });
+    }
+
+    const profile = await User.findByIdAndUpdate(
+      userId,
+      { $set: updateDetails },
+      { new: true },
+    )
+      .select("-otp -__v")
+      .populate({
+        path: "location",
+        select: "_id city",
+      });
+
+    if (!profile) {
+      return res.status(404).json({
+        message: "Profile not found",
+      });
+    }
+
+    return res.status(200).json({
+      message: "Profile updated successfully",
+      profile,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: "Server error",
+    });
+  }
+};

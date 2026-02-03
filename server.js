@@ -26,7 +26,7 @@ app.use("/", websiteRoutes);
 const startServer = async () => {
   await connectDb();
 
-  const PORT = 7860;
+  const PORT = 3001;
   const host = "localhost";
   server.listen(PORT, () => {
     console.log(`Server running at http://${host}:${PORT}`);

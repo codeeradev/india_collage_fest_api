@@ -11,6 +11,27 @@ const jwt = require("jsonwebtoken");
 
 const type = "category";
 
+exports.getUsers = async (req, res) => {
+  try {
+    const { roleId } = req.query;
+    const filter = {};
+    if (roleId) {
+      filter.roleId = Number(roleId);;
+    }
+
+    const users = await User.find(filter);
+
+    return res
+      .status(200)
+      .json({ message: "Users fetched successfuly", users });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: "Server error",
+    });
+  }
+};
+
 exports.addCategory = async (req, res) => {
   try {
     const { name, description, isActive, isFeatured } = req.body;
@@ -30,6 +51,43 @@ exports.addCategory = async (req, res) => {
     return res
       .status(200)
       .json({ message: message.success.replace("{value}", type) });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: message.server_error });
+  }
+};
+
+exports.editCategory = async (req, res) => {
+  try {
+    const { id } = req.params; // category id
+    const { name, description, isActive, isFeatured } = req.body;
+
+    if (!id) {
+      return res.status(400).json({ message: "Category id is required" });
+    }
+
+    const category = await Category.findById(id);
+    if (!category) {
+      return res.status(404).json({ message: "Category not found" });
+    }
+
+    // image optional
+    if (req.files?.image?.[0]?.filename) {
+      category.icon = `/assets/uploads/${req.files.image[0].filename}`;
+    }
+
+    // update fields only if provided
+    if (name !== undefined) category.name = name;
+    if (description !== undefined) category.description = description;
+    if (isActive !== undefined) category.isActive = isActive;
+    if (isFeatured !== undefined) category.isFeatured = isFeatured;
+
+    await category.save();
+
+    return res.status(200).json({
+      message: "Category updated successfully",
+      data: category,
+    });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: message.server_error });
@@ -92,6 +150,44 @@ exports.addSubCategory = async (req, res) => {
     return res
       .status(200)
       .json({ message: message.success.replace("{value}", type) });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: message.server_error });
+  }
+};
+
+exports.editSubCategory = async (req, res) => {
+  try {
+    const { id } = req.params; // sub category id
+    const { name, description, categoryId, isActive, isFeatured } = req.body;
+
+    if (!id) {
+      return res.status(400).json({ message: "SubCategory id is required" });
+    }
+
+    const subCategory = await SubCategory.findById(id);
+    if (!subCategory) {
+      return res.status(404).json({ message: "SubCategory not found" });
+    }
+
+    // image optional
+    if (req.files?.image?.[0]?.filename) {
+      subCategory.icon = `/assets/uploads/${req.files.image[0].filename}`;
+    }
+
+    // update fields only if provided
+    if (name !== undefined) subCategory.name = name;
+    if (description !== undefined) subCategory.description = description;
+    if (categoryId !== undefined) subCategory.categoryId = categoryId;
+    if (isActive !== undefined) subCategory.isActive = isActive;
+    if (isFeatured !== undefined) subCategory.isFeatured = isFeatured;
+
+    await subCategory.save();
+
+    return res.status(200).json({
+      message: "SubCategory updated successfully",
+      data: subCategory,
+    });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: message.server_error });
