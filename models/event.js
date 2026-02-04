@@ -24,8 +24,10 @@ const eventSchema = new mongoose.Schema(
 
     end_time: {
       type: String, // "06:00 PM"
+      default: "17:00",
     },
     address: String,
+    approvalStatus: { type: String, enum: ["approved", "rejected", "pending"] },
     eventMode: String,
     visibility: Boolean,
     isFeatured: { type: Boolean, default: false },

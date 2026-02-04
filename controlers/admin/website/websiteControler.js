@@ -31,6 +31,8 @@ exports.addEvent = async (req, res) => {
 
     const user = await User.findById(userId);
 
+    const approvalStatus = user.roleId === 1 ? "approved" : "pending";
+
     const newEvent = await Event.create({
       title,
       description,
@@ -43,6 +45,7 @@ exports.addEvent = async (req, res) => {
       end_date,
       start_time,
       end_time,
+      approvalStatus,
       address,
       category,
       sub_category: subCategory,
@@ -85,7 +88,7 @@ exports.getEvent = async (req, res) => {
     const limit = Number(req.query.limit) || 12;
     const skip = (page - 1) * limit;
 
-    const filter = { visibility: true };
+    const filter = { visibility: true, approvalStatus: "approved" };
 
     /* ================= FEATURED ================= */
     if (isFeatured === "true") {

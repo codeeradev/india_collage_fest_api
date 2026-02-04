@@ -16,7 +16,7 @@ exports.getUsers = async (req, res) => {
     const { roleId } = req.query;
     const filter = {};
     if (roleId) {
-      filter.roleId = Number(roleId);;
+      filter.roleId = Number(roleId);
     }
 
     const users = await User.find(filter);
@@ -403,8 +403,23 @@ exports.loginPanel = async (req, res) => {
 
 exports.getApprovalsRequest = async (req, res) => {
   try {
-    const { organiser } = req.query;
+    const { organiser, event } = req.query;
 
+    if (event === "true") {
+      const eventRequests = await Event.find({
+        approvalStatus: "pending",
+      })
+        .populate("location", "_id city")
+        .populate("category", "_id name icon")
+        .populate("sub_category", "_id name icon")
+        .populate("user_id", "_id name email")
+        .sort({ createdAt: -1 });
+
+      return res.status(200).json({
+        message: "Event approval requests fetched successfully",
+        eventRequests,
+      });
+    }
     // query params are strings
     if (organiser === "true") {
       const organiserRequests = await AdminApproval.find({
@@ -436,11 +451,11 @@ exports.getApprovalsRequest = async (req, res) => {
 
 exports.approvalAction = async (req, res) => {
   try {
-    const { approvalId, action, reason } = req.body;
+    const { approvalId, action, reason, type } = req.body;
 
-    if (!approvalId || !action) {
+    if (!approvalId || !action || !type) {
       return res.status(400).json({
-        message: "approvalId and action are required",
+        message: "approvalId, action and type are required",
       });
     }
 
@@ -450,73 +465,87 @@ exports.approvalAction = async (req, res) => {
       });
     }
 
-    const approval = await AdminApproval.findById(approvalId);
+    /* ================= ORGANIZER ================= */
+    if (type === "organizer") {
+      const approval = await AdminApproval.findById(approvalId);
 
-    if (!approval) {
-      return res.status(404).json({
-        message: "Approval request not found",
-      });
+      if (!approval) {
+        return res.status(404).json({ message: "Approval request not found" });
+      }
+
+      if (approval.status !== "pending") {
+        return res.status(400).json({ message: "Request already processed" });
+      }
+
+      if (action === "approved") {
+        const plainPassword = generateRandomPassword(10);
+
+        approval.status = "approved";
+        approval.reason = null;
+        approval.approvedAt = new Date();
+        approval.approvedBy = req.admin?._id || null;
+        await approval.save();
+
+        const user = await User.findByIdAndUpdate(
+          approval.user_id,
+          {
+            roleId: 3,
+            status: true,
+            password: plainPassword,
+          },
+          { new: true }
+        );
+
+        await sendVerificationEmail(
+          user.email,
+          "Organizer Account Approved – India College Fest",
+          organiserCredentialsTemplate(user.email, user.name, plainPassword)
+        );
+
+        return res.status(200).json({ message: "Organizer approved successfully" });
+      }
+
+      if (action === "rejected") {
+        approval.status = "rejected";
+        approval.reason = reason || "Rejected by admin";
+        approval.rejectedAt = new Date();
+        await approval.save();
+
+        return res.status(200).json({ message: "Organizer request rejected" });
+      }
     }
 
-    if (approval.status !== "pending") {
-      return res.status(400).json({
-        message: "Request already processed",
-      });
+    /* ================= EVENT ================= */
+    if (type === "event") {
+      const event = await Event.findById(approvalId);
+
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      if (event.approvalStatus !== "pending") {
+        return res.status(400).json({ message: "Event already processed" });
+      }
+
+      if (action === "approved") {
+        event.approvalStatus = "approved";
+        await event.save();
+
+        return res.status(200).json({ message: "Event approved successfully" });
+      }
+
+      if (action === "rejected") {
+        event.approvalStatus = "rejected";
+        event.rejectionReason = reason || "Rejected by admin";
+        await event.save();
+
+        return res.status(200).json({ message: "Event rejected successfully" });
+      }
     }
 
-    // ======================
-    // APPROVE
-    // ======================
-    if (action === "approved") {
-      const plainPassword = generateRandomPassword(10);
-
-      approval.status = "approved";
-      approval.reason = null;
-      approval.approvedAt = new Date();
-      approval.approvedBy = req.admin?._id || null;
-
-      await approval.save();
-
-      const user = await User.findByIdAndUpdate(
-        approval.user_id,
-        {
-          roleId: 3,
-          status: true,
-          password: plainPassword,
-        },
-        { new: true },
-      );
-
-      await sendVerificationEmail(
-        user.email,
-        "Organizer Account Approved – India College Fest",
-        organiserCredentialsTemplate(user.email, user.name, plainPassword),
-      );
-
-      return res.status(200).json({
-        message: "Organizer approved successfully",
-      });
-    }
-
-    // ======================
-    // REJECT
-    // ======================
-    if (action === "rejected") {
-      approval.status = "rejected";
-      approval.reason = reason || "Rejected by admin";
-      approval.rejectedAt = new Date();
-
-      await approval.save();
-
-      return res.status(200).json({
-        message: "Organizer request rejected",
-      });
-    }
   } catch (error) {
     console.error(error);
-    return res.status(500).json({
-      message: "Server error",
-    });
+    return res.status(500).json({ message: "Server error" });
   }
 };
 
