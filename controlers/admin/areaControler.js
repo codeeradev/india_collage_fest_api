@@ -6,8 +6,9 @@ const type = "City";
 // ADD CITY
 exports.addCity = async (req, res) => {
   try {
-    const { city, latitude, longitude, description, is_active } = req.body;
+    const { city, latitude, longitude, description, is_active, popular } = req.body;
 
+    const image = `/assets/uploads/${req.files.image[0].filename}`
     const exists = await City.findOne({ city });
     if (exists) {
       return res.status(400).json({ message: "City already exists" });
@@ -18,6 +19,8 @@ exports.addCity = async (req, res) => {
       latitude,
       longitude,
       description,
+      image,
+      popular,
       is_active: is_active ?? true,
     });
 
@@ -49,7 +52,7 @@ exports.getCity = async (req, res) => {
 exports.editCity = async (req, res) => {
   try {
     const { cityId } = req.params;
-    const { city, latitude, longitude, description, is_active } = req.body;
+    const { city, latitude, longitude, description, is_active, popular } = req.body;
 
     const updateData = {};
 
@@ -58,7 +61,11 @@ exports.editCity = async (req, res) => {
     if (longitude !== undefined) updateData.longitude = longitude;
     if (description !== undefined) updateData.description = description;
     if (is_active !== undefined) updateData.is_active = is_active;
-
+    if (req.files?.image) {
+      updateData.image = `/assets/uploads/${req.files.image[0].filename}`;
+    }
+    if (popular !== undefined) updateData.popular = popular;
+      
     const updatedCity = await City.findByIdAndUpdate(
       cityId,
       { $set: updateData },

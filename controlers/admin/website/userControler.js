@@ -61,18 +61,7 @@ exports.verifyOtp = async (req, res) => {
     }
 
     if (user.roleId === 3 && !user.mouId) {
-      const mouCount = await MOU.countDocuments();
-
-      const mou = await MOU.create({
-        organizationId: user._id,
-        mouNumber: `MOU-${new Date().getFullYear()}-${String(
-          mouCount + 1,
-        ).padStart(5, "0")}`,
-      });
-
-      user.mouId = mou._id;
       user.mouSigned = false;
-
       await user.save();
     }
 

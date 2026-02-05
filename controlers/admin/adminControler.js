@@ -385,7 +385,6 @@ exports.loginPanel = async (req, res) => {
       },
     );
 
-    // hide password in response
     user.password = undefined;
 
     return res.status(200).json({

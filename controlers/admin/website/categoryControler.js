@@ -6,6 +6,11 @@ const type = "category";
 
 exports.getCategory = async (req, res) => {
   try {
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 100;
+
+    const skip = (page - 1) * limit;
+
     const categories = await Category.aggregate([
       {
         $match: {
@@ -14,6 +19,12 @@ exports.getCategory = async (req, res) => {
       },
 
       // 🔗 JOIN SUB CATEGORIES
+      {
+        $sort: {
+          isFeatured: -1, // featured on top
+          createdAt: -1, // fallback
+        },
+      },
       {
         $lookup: {
           from: "sub_categories",
@@ -57,10 +68,8 @@ exports.getCategory = async (req, res) => {
           events: 0,
         },
       },
-
-      {
-        $sort: { createdAt: -1 },
-      },
+      { $skip: skip },
+      { $limit: limit },
     ]);
 
     return res.status(200).json({

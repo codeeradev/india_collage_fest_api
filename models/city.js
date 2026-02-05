@@ -6,6 +6,8 @@ const citySchema = new mongoose.Schema(
     latitude:String,
     longitude:String,
     description: String,
+    image:String,
+    popular:{type:Boolean, default:true},
     is_active: { type: Boolean, default: true },
   },
   { timestamps: true }

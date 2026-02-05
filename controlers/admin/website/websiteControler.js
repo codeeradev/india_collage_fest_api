@@ -215,12 +215,42 @@ exports.getEvent = async (req, res) => {
 
 exports.getCitiesWebsite = async (req, res) => {
   try {
-    const cities = await City.find({ is_active: true }).sort({ createdAt: -1 });
+    const { cityId, page, limit } = req.query;
+    const skip = (page - 1) * limit;
+
+    // ==========================
+    // IF CITY SELECTED → ONLY THAT CITY
+    // ==========================
+    if (cityId) {
+      const city = await City.findOne({
+        _id: cityId,
+        is_active: true,
+      }).lean();
+
+      const events = await Event.find({ location: cityId })
+        .sort({ createdAt: -1 })
+        .lean();
+
+      return res.status(200).json({
+        message: message.fetchSuccess.replace("{value}", cityType),
+        data: city ? [{ ...city, events }] : [],   // 👈 SAME KEY (data)
+      });
+    }
+
+    // ==========================
+    // NORMAL CITY LIST (PAGINATED + POPULAR FIRST)
+    // ==========================
+    const cities = await City.find({ is_active: true })
+      .sort({ popular: -1, createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .lean();
 
     return res.status(200).json({
       message: message.fetchSuccess.replace("{value}", cityType),
       data: cities,
     });
+
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: message.server_error });

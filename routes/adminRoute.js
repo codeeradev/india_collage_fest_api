@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const verifyToken = require("../middleware/verifyAuth");
-const {requireMouSigned} = require("../middleware/mouVerification")
+const { requireMouSigned } = require("../middleware/mouVerification");
 const {
   addCategory,
   editCategory,
@@ -16,11 +16,10 @@ const {
   approvalAction,
   editProfile,
   getProfile,
-  getUsers
+  getUsers,
 } = require("../controlers/admin/adminControler");
 
-
-const {previewMouPdf} = require("../utils/mouPdf")
+const { previewMouPdf } = require("../utils/mouPdf");
 
 const {
   addCity,
@@ -32,6 +31,11 @@ const {
   getMyMou,
   sendMouOtp,
   verifyMouOtp,
+  startMou,
+  organiserSubmitMou,
+  adminReplyMou,
+  getMouVersions,
+  finalizeMou,
 } = require("../controlers/admin/mouController");
 const upload = require("../middleware/upload");
 
@@ -41,15 +45,31 @@ router.post("/add-category", upload, addCategory);
 router.post("/edit-category/:id", upload, editCategory);
 router.post("/add-sub-category", upload, addSubCategory);
 router.post("/edit-sub-category/:id", upload, editSubCategory);
-router.post("/add-city", addCity);
-router.post("/edit-city/:cityId", editCity);
-router.post("/editEvents/:eventId", upload, verifyToken, requireMouSigned, editEvents);
+router.post("/add-city", upload, addCity);
+router.post("/edit-city/:cityId", upload, editCity);
+router.post(
+  "/editEvents/:eventId",
+  upload,
+  verifyToken,
+  requireMouSigned,
+  editEvents,
+);
 
 router.post("/approval-action", approvalAction);
+
+router.post("/organizer/mou/start-mou", verifyToken, startMou);
+
+router.post("/organizer/mou/submit-mou", verifyToken, organiserSubmitMou);
+
+router.post("/mou/reply-mou", adminReplyMou);
+
+router.post("/mou/finalize-mou", finalizeMou);
 
 router.post("/organizer/mou/send-otp", verifyToken, sendMouOtp);
 
 router.post("/organizer/mou/verify-otp", verifyToken, verifyMouOtp);
+
+router.get("/get-mou-versions", getMouVersions);
 
 router.get("/get-category", getCategory);
 router.get("/get-city", getCity);
@@ -64,6 +84,5 @@ router.get("/get-approvals-request", getApprovalsRequest);
 router.get("/get-sub-category/:categoryId", getSubCategoriesByCategory);
 router.get("/organizer/mou", verifyToken, getMyMou);
 router.get("/organizer/mou/preview", verifyToken, previewMouPdf);
-
 
 module.exports = router;
