@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const mouSchema = new mongoose.Schema({
   organizationId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
+    ref: "user",
     required: true,
   },
 
@@ -12,6 +12,12 @@ const mouSchema = new mongoose.Schema({
     unique: true,
   },
 
+  finalVersionId:
+  {
+    type:mongoose.Schema.Types.ObjectId,
+    ref: "mou_version",
+  },
+  
   currentStatus: {
     type: String,
     enum: [

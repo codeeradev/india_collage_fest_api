@@ -28,6 +28,8 @@ const {
 } = require("../controlers/admin/areaControler");
 
 const {
+  upsertBaseTemplate,
+  getBaseTemplate,
   getMyMou,
   sendMouOtp,
   verifyMouOtp,
@@ -36,6 +38,7 @@ const {
   adminReplyMou,
   getMouVersions,
   finalizeMou,
+  getAllMousForAdmin
 } = require("../controlers/admin/mouController");
 const upload = require("../middleware/upload");
 
@@ -57,6 +60,8 @@ router.post(
 
 router.post("/approval-action", approvalAction);
 
+router.post("/mou/update-base-template", verifyToken, upsertBaseTemplate);
+
 router.post("/organizer/mou/start-mou", verifyToken, startMou);
 
 router.post("/organizer/mou/submit-mou", verifyToken, organiserSubmitMou);
@@ -69,7 +74,7 @@ router.post("/organizer/mou/send-otp", verifyToken, sendMouOtp);
 
 router.post("/organizer/mou/verify-otp", verifyToken, verifyMouOtp);
 
-router.get("/get-mou-versions", getMouVersions);
+router.get("/get-mou-versions/:mouId", getMouVersions);
 
 router.get("/get-category", getCategory);
 router.get("/get-city", getCity);
@@ -83,6 +88,8 @@ router.get("/get-approvals-request", getApprovalsRequest);
 
 router.get("/get-sub-category/:categoryId", getSubCategoriesByCategory);
 router.get("/organizer/mou", verifyToken, getMyMou);
+router.get("/mou/all-mou", getAllMousForAdmin);
+router.get("/mou/base-template", verifyToken, getBaseTemplate);
 router.get("/organizer/mou/preview", verifyToken, previewMouPdf);
 
 module.exports = router;
