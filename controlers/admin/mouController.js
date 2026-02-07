@@ -10,6 +10,8 @@ const { sendVerificationEmail } = require("../../config/nodeMailer");
 const { otpTemplate } = require("../../utils/emailTemplates");
 const generateSignedPdf = require("../../utils/generateSignedMouPdf");
 
+const { fillTemplate } = require("../../utils/emailTemplates");
+
 /* =====================================================
    BASE TEMPLATE (ADMIN)
 ===================================================== */
@@ -27,6 +29,27 @@ exports.upsertBaseTemplate = async (req, res) => {
   );
 
   res.json({ data: template });
+};
+
+exports.getFilledBaseTemplate = async (req, res) => {
+  const mou = await MOU.findOne({ organizationId: req.user });
+  if (!mou) return res.status(404).json({ message: "MOU missing" });
+
+  const template = await MouVersion.findOne({ isBaseTemplate: true });
+  if (!template) return res.status(500).json({ message: "Base template missing" });
+
+  const filledHtml = fillTemplate(template.htmlContent, {
+    mouNumber: mou.mouNumber,
+    createdAt: mou.createdAt,
+    name: req.user.name,
+    email: req.user.email
+  });
+
+  res.json({
+    data: {
+      htmlContent: filledHtml
+    }
+  });
 };
 
 exports.getBaseTemplate = async (req, res) => {
@@ -246,9 +269,8 @@ exports.verifyMouOtp = async (req, res) => {
   if (!mou) return res.status(404).json({ message: "MOU missing" });
 
   const pdf = await generateSignedPdf({
-    name: req.user.name,
-    email: req.user.email,
-    mouNumber: mou.mouNumber,
+    mou,
+    user: req.user,
   });
 
   mou.currentStatus = "signed";

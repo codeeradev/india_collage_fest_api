@@ -38,7 +38,8 @@ const {
   adminReplyMou,
   getMouVersions,
   finalizeMou,
-  getAllMousForAdmin
+  getAllMousForAdmin,
+  getFilledBaseTemplate
 } = require("../controlers/admin/mouController");
 const upload = require("../middleware/upload");
 
@@ -90,6 +91,7 @@ router.get("/get-sub-category/:categoryId", getSubCategoriesByCategory);
 router.get("/organizer/mou", verifyToken, getMyMou);
 router.get("/mou/all-mou", getAllMousForAdmin);
 router.get("/mou/base-template", verifyToken, getBaseTemplate);
+router.get("/organizer/filled-base-template", verifyToken, getFilledBaseTemplate);
 router.get("/organizer/mou/preview", verifyToken, previewMouPdf);
 
 module.exports = router;

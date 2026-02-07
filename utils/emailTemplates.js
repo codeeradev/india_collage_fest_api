@@ -261,4 +261,15 @@ const mouTemplate = ({ name, email, date, signedAt }) => `
 </html>
 `;
 
-module.exports = { otpTemplate, organiserCredentialsTemplate, mouTemplate };
+function fillTemplate(html, data) {
+  return html
+    .replace(/{{MOU_NUMBER}}/g, data.mouNumber)
+    .replace(/{{MOU_DATE}}/g, new Date(data.createdAt).toDateString())
+    .replace(/{{ORGANISER_NAME}}/g, data.name)
+    .replace(/{{ORGANISER_EMAIL}}/g, data.email)
+    // .replace(/{{ORGANISER_SIGNATURE}}/g, data.email)
+    .replace(/{{SIGNED_AT}}/g, new Date().toLocaleString());
+}
+
+
+module.exports = { otpTemplate, organiserCredentialsTemplate, mouTemplate, fillTemplate };

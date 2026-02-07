@@ -1,40 +1,29 @@
 const path = require("path");
 const fs = require("fs");
 const pdf = require("html-pdf-node");
-const { mouTemplate } = require("./emailTemplates");
+const MouVersion = require("../models/mouVersion");
+const { fillTemplate } = require("./emailTemplates");
 
-module.exports = async function generateSignedPdf(data) {
-  const html = mouTemplate({
-    name: data.name,
-    email: data.email,
-    date: new Date().toDateString(),
-    signedAt: new Date().toLocaleString(),
+module.exports = async function generateSignedPdf({ mou, user }) {
+  // 1️⃣ Load base template
+  const template = await MouVersion.findOne({ isBaseTemplate: true });
+  if (!template) throw new Error("Base template missing");
+
+  // 2️⃣ Fill placeholders properly
+  const html = fillTemplate(template.htmlContent, {
+    mouNumber: mou.mouNumber,
+    createdAt: mou.createdAt,
+    name: user.name,
+    email: user.email,
   });
 
-  // absolute directory
-  const uploadDir = path.join(
-    __dirname,
-    "../assets/uploads/mou/signed"
-  );
+  // 3️⃣ Save PDF
+  const uploadDir = path.join(__dirname, "../assets/uploads/mou/signed");
+  if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
-  // create folder if not exists
-  if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-  }
+  const filePath = path.join(uploadDir, `MOU-${mou.mouNumber}.pdf`);
 
-  const signedPath = path.join(
-    uploadDir,
-    `MOU-${data.mouNumber}.pdf`
-  );
+  await pdf.generatePdf({ content: html }, { format: "A4", path: filePath });
 
-  await pdf.generatePdf(
-    { content: html },
-    {
-      format: "A4",
-      path: signedPath,
-    }
-  );
-
-  // return public path (for frontend)
-  return `assets/uploads/mou/signed/MOU-${data.mouNumber}.pdf`;
+  return `assets/uploads/mou/signed/MOU-${mou.mouNumber}.pdf`;
 };
