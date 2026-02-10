@@ -1,5 +1,6 @@
 const Category = require("../../models/category");
 const SubCategory = require("../../models/subCategory");
+const City = require("../../models/city");
 const message = require("../../constants/messages.json");
 const Event = require("../../models/event");
 const User = require("../../models/user");
@@ -24,6 +25,46 @@ exports.getUsers = async (req, res) => {
     return res
       .status(200)
       .json({ message: "Users fetched successfuly", users });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: "Server error",
+    });
+  }
+};
+
+exports.getDashboardStats = async (req, res) => {
+  try {
+    const [
+      totalUsers,
+      totalOrganisers,
+      totalEvents,
+      totalCategories,
+      totalCities,
+      pendingEventApprovals,
+      pendingOrganizerApprovals,
+    ] = await Promise.all([
+      User.countDocuments(),
+      User.countDocuments({ roleId: 3 }),
+      Event.countDocuments(),
+      Category.countDocuments(),
+      City.countDocuments(),
+      Event.countDocuments({ approvalStatus: "pending" }),
+      AdminApproval.countDocuments({ type: "ORGANIZER", status: "pending" }),
+    ]);
+
+    return res.status(200).json({
+      message: "Dashboard stats fetched successfully",
+      data: {
+        totalUsers,
+        totalOrganisers,
+        totalEvents,
+        totalCategories,
+        totalCities,
+        pendingEventApprovals,
+        pendingOrganizerApprovals,
+      },
+    });
   } catch (error) {
     console.error(error);
     return res.status(500).json({
@@ -458,7 +499,7 @@ exports.approvalAction = async (req, res) => {
       });
     }
 
-    if (!["approved", "rejected"].includes(action)) {
+    if (!["approved", "rejected", "resubmitted"].includes(action)) {
       return res.status(400).json({
         message: "Action must be approved or rejected",
       });
@@ -492,16 +533,18 @@ exports.approvalAction = async (req, res) => {
             status: true,
             password: plainPassword,
           },
-          { new: true }
+          { new: true },
         );
 
         await sendVerificationEmail(
           user.email,
           "Organizer Account Approved – India College Fest",
-          organiserCredentialsTemplate(user.email, user.name, plainPassword)
+          organiserCredentialsTemplate(user.email, user.name, plainPassword),
         );
 
-        return res.status(200).json({ message: "Organizer approved successfully" });
+        return res
+          .status(200)
+          .json({ message: "Organizer approved successfully" });
       }
 
       if (action === "rejected") {
@@ -511,6 +554,17 @@ exports.approvalAction = async (req, res) => {
         await approval.save();
 
         return res.status(200).json({ message: "Organizer request rejected" });
+      }
+
+      if (action === "resubmitted") {
+        approval.status = "resubmitted";
+        approval.reason = reason || approval.reason;
+        approval.resubmittedAt = new Date();
+        await approval.save();
+
+        return res.status(200).json({
+          message: "Organizer request resubmitted successfully",
+        });
       }
     }
 
@@ -540,8 +594,17 @@ exports.approvalAction = async (req, res) => {
 
         return res.status(200).json({ message: "Event rejected successfully" });
       }
-    }
 
+      if (action === "resubmitted") {
+        event.approvalStatus = "resubmitted";
+        event.rejectionReason = reason || event.rejectionReason;
+        await event.save();
+
+        return res.status(200).json({
+          message: "Event resubmitted successfully",
+        });
+      }
+    }
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Server error" });
@@ -623,5 +686,41 @@ exports.getProfile = async (req, res) => {
     return res.status(500).json({
       message: "Server error",
     });
+  }
+};
+
+exports.updateUserPermissions = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { permissions } = req.body;
+
+    const adminRole = req.user.roleId; // from auth middleware
+
+    if (adminRole !== 1) {
+      return res.status(403).json({ message: "Only admin allowed" });
+    }
+
+    if (!permissions || typeof permissions !== "object") {
+      return res.status(400).json({ message: "Invalid permissions format" });
+    }
+
+    const user = await User.findById(id);
+
+    if (!user || user.roleId !== 3) {
+      return res.status(404).json({ message: "Organizer not found" });
+    }
+
+    // overwrite permissions cleanly
+    user.permissions = new Map(Object.entries(permissions));
+
+    await user.save();
+
+    return res.json({
+      message: "Permissions updated successfully",
+      permissions: Object.fromEntries(user.permissions),
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Server error" });
   }
 };

@@ -10,7 +10,7 @@ const adminApprovalSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "approved", "rejected"],
+      enum: ["pending", "approved", "rejected", "resubmitted"],
       default: "pending",
     },
     approvedBy: {
@@ -25,6 +25,11 @@ const adminApprovalSchema = new mongoose.Schema(
     },
 
     rejectedAt: {
+      type: Date,
+      default: null,
+    },
+
+    resubmittedAt: {
       type: Date,
       default: null,
     },

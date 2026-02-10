@@ -7,6 +7,11 @@ const { loginUser, verifyOtp, becomeAOrganiser, getOrganiser, getOrganiserEvents
 const { getCategory, getSubCategoriesByCategory } = require('../controlers/admin/website/categoryControler');
 const { addEvent, getEvent, getCitiesWebsite } = require('../controlers/admin/website/websiteControler');
 
+const {
+  getUserEvents,
+  editUserEvent,
+} = require("../controlers/admin/userEventController");
+
 const upload = require("../middleware/upload");
 
 router.post("/add-event", verifyToken, upload, addEvent)
@@ -23,5 +28,8 @@ router.get("/get-category", getCategory),
 router.get("/get-sub-category/:categoryId", getSubCategoriesByCategory), 
 router.get("/get-user-profile", verifyToken, getUserProfile),
 router.post("/update-user-profile", upload, verifyToken, updateUserProfile),
+
+router.get("/user/events", verifyToken, getUserEvents);
+router.post("/user/edit-event/:eventId", verifyToken, upload, editUserEvent);
 
 module.exports = router;

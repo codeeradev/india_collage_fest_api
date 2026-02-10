@@ -25,4 +25,5 @@ const upload = multer({ storage });
 module.exports = upload.fields([
  { name: "image", maxCount: 1 },
  { name: "bannerImage", maxCount: 2 },
+ { name: "csv", maxCount: 1 },
 ]);

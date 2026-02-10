@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const verifyToken = require("../middleware/verifyAuth");
-const { requireMouSigned } = require("../middleware/mouVerification");
+const { requirePermission } = require("../middleware/mouVerification");
 const {
   addCategory,
   editCategory,
@@ -10,6 +10,7 @@ const {
   editSubCategory,
   getSubCategoriesByCategory,
   editEvents,
+  updateUserPermissions,
   getEvent,
   loginPanel,
   getApprovalsRequest,
@@ -17,6 +18,7 @@ const {
   editProfile,
   getProfile,
   getUsers,
+  getDashboardStats,
 } = require("../controlers/admin/adminControler");
 
 const { previewMouPdf } = require("../utils/mouPdf");
@@ -25,7 +27,18 @@ const {
   addCity,
   getCity,
   editCity,
+  addCityCsv,
 } = require("../controlers/admin/areaControler");
+
+const {
+  createSocialMedia,
+  updateSocialMedia,
+  deleteSocialMedia,
+  getSocialMediaAdmin,
+} = require("../controlers/admin/socialMediaController");
+const {
+  getUserDashboard,
+} = require("../controlers/admin/userEventController");
 
 const {
   upsertBaseTemplate,
@@ -39,7 +52,7 @@ const {
   getMouVersions,
   finalizeMou,
   getAllMousForAdmin,
-  getFilledBaseTemplate
+  getFilledBaseTemplate,
 } = require("../controlers/admin/mouController");
 const upload = require("../middleware/upload");
 
@@ -50,12 +63,14 @@ router.post("/edit-category/:id", upload, editCategory);
 router.post("/add-sub-category", upload, addSubCategory);
 router.post("/edit-sub-category/:id", upload, editSubCategory);
 router.post("/add-city", upload, addCity);
+router.post("/add-city-csv", upload, addCityCsv);
 router.post("/edit-city/:cityId", upload, editCity);
+router.get("/user/dashboard", verifyToken, getUserDashboard);
 router.post(
   "/editEvents/:eventId",
   upload,
   verifyToken,
-  requireMouSigned,
+  requirePermission("EDIT_EVENTS"),
   editEvents,
 );
 
@@ -75,7 +90,11 @@ router.post("/organizer/mou/send-otp", verifyToken, sendMouOtp);
 
 router.post("/organizer/mou/verify-otp", verifyToken, verifyMouOtp);
 
+router.post("/organizer/permissions/:id", verifyToken, updateUserPermissions);
+
 router.get("/get-mou-versions/:mouId", getMouVersions);
+
+router.get("/dashboard-stats", verifyToken, getDashboardStats);
 
 router.get("/get-category", getCategory);
 router.get("/get-city", getCity);
@@ -91,7 +110,16 @@ router.get("/get-sub-category/:categoryId", getSubCategoriesByCategory);
 router.get("/organizer/mou", verifyToken, getMyMou);
 router.get("/mou/all-mou", getAllMousForAdmin);
 router.get("/mou/base-template", verifyToken, getBaseTemplate);
-router.get("/organizer/filled-base-template", verifyToken, getFilledBaseTemplate);
+router.get(
+  "/organizer/filled-base-template",
+  verifyToken,
+  getFilledBaseTemplate,
+);
 router.get("/organizer/mou/preview", verifyToken, previewMouPdf);
+
+router.get("/social-media", verifyToken, getSocialMediaAdmin);
+router.post("/social-media", verifyToken, upload, createSocialMedia);
+router.put("/social-media/:id", verifyToken, upload, updateSocialMedia);
+router.delete("/social-media/:id", verifyToken, deleteSocialMedia);
 
 module.exports = router;

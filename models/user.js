@@ -5,6 +5,11 @@ const userSchema = new mongoose.Schema(
     name: String,
     roleId: Number,
     location: { type: mongoose.Types.ObjectId, ref: "city" },
+    permissions: {
+      type: Map,
+      of: Boolean,
+      default: {},   // admin fills this
+    },
     phone: Number, // it is without +91 or u can say country code
     status: Boolean,
     email: String,
