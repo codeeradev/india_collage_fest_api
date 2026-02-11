@@ -15,6 +15,7 @@ const server = http.createServer(app);
 
 const adminRoutes = require("./routes/adminRoute");
 const websiteRoutes = require("./routes/websiteRoute");
+const socialRoutes = require("./routes/socialRoute");
 
 app.get("/", (req, res) => {
   res.send("India College Fest API is running smoothly 🚀");
@@ -22,6 +23,7 @@ app.get("/", (req, res) => {
 app.use("/assets", require("express").static("assets"));
 app.use("/admin", adminRoutes);
 app.use("/", websiteRoutes);
+app.use("/", socialRoutes);
 
 const startServer = async () => {
   await connectDb();

@@ -1,6 +1,5 @@
 const Category = require("../../models/category");
 const SubCategory = require("../../models/subCategory");
-const City = require("../../models/city");
 const message = require("../../constants/messages.json");
 const Event = require("../../models/event");
 const User = require("../../models/user");
@@ -25,46 +24,6 @@ exports.getUsers = async (req, res) => {
     return res
       .status(200)
       .json({ message: "Users fetched successfuly", users });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({
-      message: "Server error",
-    });
-  }
-};
-
-exports.getDashboardStats = async (req, res) => {
-  try {
-    const [
-      totalUsers,
-      totalOrganisers,
-      totalEvents,
-      totalCategories,
-      totalCities,
-      pendingEventApprovals,
-      pendingOrganizerApprovals,
-    ] = await Promise.all([
-      User.countDocuments(),
-      User.countDocuments({ roleId: 3 }),
-      Event.countDocuments(),
-      Category.countDocuments(),
-      City.countDocuments(),
-      Event.countDocuments({ approvalStatus: "pending" }),
-      AdminApproval.countDocuments({ type: "ORGANIZER", status: "pending" }),
-    ]);
-
-    return res.status(200).json({
-      message: "Dashboard stats fetched successfully",
-      data: {
-        totalUsers,
-        totalOrganisers,
-        totalEvents,
-        totalCategories,
-        totalCities,
-        pendingEventApprovals,
-        pendingOrganizerApprovals,
-      },
-    });
   } catch (error) {
     console.error(error);
     return res.status(500).json({

@@ -18,6 +18,11 @@ const userSchema = new mongoose.Schema(
     image: String,
     password: String,
     bannerImage: String,
+    facebook_page_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "FacebookPage",
+      default: null,
+    },
     events: Number,
     mouSigned: {
       type: Boolean,

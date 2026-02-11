@@ -18,7 +18,6 @@ const {
   editProfile,
   getProfile,
   getUsers,
-  getDashboardStats,
 } = require("../controlers/admin/adminControler");
 
 const { previewMouPdf } = require("../utils/mouPdf");
@@ -31,14 +30,9 @@ const {
 } = require("../controlers/admin/areaControler");
 
 const {
-  createSocialMedia,
-  updateSocialMedia,
-  deleteSocialMedia,
-  getSocialMediaAdmin,
-} = require("../controlers/admin/socialMediaController");
-const {
+  getDashboardStats,
   getUserDashboard,
-} = require("../controlers/admin/userEventController");
+} = require("../controlers/admin/dashboardController");
 
 const {
   upsertBaseTemplate,
@@ -117,9 +111,6 @@ router.get(
 );
 router.get("/organizer/mou/preview", verifyToken, previewMouPdf);
 
-router.get("/social-media", verifyToken, getSocialMediaAdmin);
-router.post("/social-media", verifyToken, upload, createSocialMedia);
-router.put("/social-media/:id", verifyToken, upload, updateSocialMedia);
-router.delete("/social-media/:id", verifyToken, deleteSocialMedia);
+
 
 module.exports = router;
