@@ -35,6 +35,13 @@ const {
 } = require("../controlers/admin/dashboardController");
 
 const {
+  addBlog,
+  editBlog,
+  getBlogs,
+  getBlogById,
+} = require("../controlers/admin/blogController");
+
+const {
   upsertBaseTemplate,
   getBaseTemplate,
   getMyMou,
@@ -89,6 +96,11 @@ router.post("/organizer/permissions/:id", verifyToken, updateUserPermissions);
 router.get("/get-mou-versions/:mouId", getMouVersions);
 
 router.get("/dashboard-stats", verifyToken, getDashboardStats);
+
+router.post("/add-blog", verifyToken, upload, addBlog);
+router.post("/edit-blog/:id", verifyToken, upload, editBlog);
+router.get("/get-blogs", verifyToken, getBlogs);
+router.get("/get-blog/:id", verifyToken, getBlogById);
 
 router.get("/get-category", getCategory);
 router.get("/get-city", getCity);

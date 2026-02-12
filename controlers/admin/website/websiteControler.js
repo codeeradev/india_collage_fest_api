@@ -216,7 +216,10 @@ exports.getEvent = async (req, res) => {
 exports.getCitiesWebsite = async (req, res) => {
   try {
     const { cityId, page, limit } = req.query;
-    const skip = (page - 1) * limit;
+    const pageNum = Number(page) || 1;
+    const limitNum = Number(limit);
+    const safeLimit = Number.isFinite(limitNum) && limitNum > 0 ? limitNum : 0;
+    const skip = safeLimit ? (pageNum - 1) * safeLimit : 0;
 
     // ==========================
     // IF CITY SELECTED → ONLY THAT CITY
@@ -231,20 +234,74 @@ exports.getCitiesWebsite = async (req, res) => {
         .sort({ createdAt: -1 })
         .lean();
 
+      const approvedCount = await Event.countDocuments({
+        location: cityId,
+        approvalStatus: "approved",
+        visibility: true,
+      });
+
       return res.status(200).json({
         message: message.fetchSuccess.replace("{value}", cityType),
-        data: city ? [{ ...city, events }] : [],   // 👈 SAME KEY (data)
+        data: city
+          ? [
+              {
+                ...city,
+                events,
+                eventCount: approvedCount,
+                popular: approvedCount > 0,
+              },
+            ]
+          : [],   // 👈 SAME KEY (data)
       });
     }
 
     // ==========================
     // NORMAL CITY LIST (PAGINATED + POPULAR FIRST)
     // ==========================
-    const cities = await City.find({ is_active: true })
-      .sort({ popular: -1, createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit))
-      .lean();
+    const pipeline = [
+      { $match: { is_active: true } },
+      {
+        $lookup: {
+          from: "events",
+          let: { cityId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ["$location", "$$cityId"] },
+                approvalStatus: "approved",
+                visibility: true,
+              },
+            },
+            { $count: "count" },
+          ],
+          as: "eventStats",
+        },
+      },
+      {
+        $addFields: {
+          eventCount: {
+            $ifNull: [{ $arrayElemAt: ["$eventStats.count", 0] }, 0],
+          },
+        },
+      },
+      {
+        $addFields: {
+          popular: { $gt: ["$eventCount", 0] },
+        },
+      },
+      { $project: { eventStats: 0 } },
+      { $sort: { eventCount: -1, createdAt: -1 } },
+    ];
+
+    if (skip) {
+      pipeline.push({ $skip: skip });
+    }
+
+    if (safeLimit) {
+      pipeline.push({ $limit: safeLimit });
+    }
+
+    const cities = await City.aggregate(pipeline);
 
     return res.status(200).json({
       message: message.fetchSuccess.replace("{value}", cityType),

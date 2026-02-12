@@ -168,6 +168,114 @@ const organiserCredentialsTemplate = (email, name, password) => `
 </html>
 `;
 
+const organiserStatusTemplate = ({ name, status, reason }) => `
+<html>
+  <body style="margin:0;padding:0;background:#0f172a;font-family:Arial,sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="padding:30px 10px;">
+      <tr>
+        <td align="center">
+          <table width="100%" cellpadding="0" cellspacing="0"
+            style="max-width:600px;background:#ffffff;border-radius:14px;overflow:hidden;">
+            <tr>
+              <td style="background:linear-gradient(135deg,#2563eb,#1d4ed8);
+                padding:30px;text-align:center;">
+                <h1 style="margin:0;color:#ffffff;font-size:26px;letter-spacing:1px;">
+                  INDIA COLLEGE FEST
+                </h1>
+                <p style="margin-top:8px;color:#dbeafe;">
+                  Organizer Application Update
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:30px;text-align:center;">
+                <h2 style="margin-top:0;color:#111827;">
+                  Hi ${name || "Organizer"},
+                </h2>
+                <p style="font-size:15px;color:#4b5563;line-height:1.6;">
+                  Your organizer application is <strong>${status}</strong>.
+                </p>
+                ${
+                  reason
+                    ? `<div style="margin:20px auto;padding:16px 18px;background:#f9fafb;border-radius:10px;max-width:420px;text-align:left;">
+                      <p style="margin:0;font-size:14px;color:#111827;"><strong>Reason:</strong> ${reason}</p>
+                    </div>`
+                    : ""
+                }
+                <p style="font-size:13px;color:#6b7280;margin-top:18px;">
+                  If you have questions, reply to this email.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="background:#f9fafb;padding:16px;text-align:center;">
+                <p style="margin:0;font-size:12px;color:#6b7280;">
+                  &copy; ${new Date().getFullYear()} India College Fest
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
+`;
+
+const eventStatusTemplate = ({ name, title, status, reason }) => `
+<html>
+  <body style="margin:0;padding:0;background:#0f172a;font-family:Arial,sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="padding:30px 10px;">
+      <tr>
+        <td align="center">
+          <table width="100%" cellpadding="0" cellspacing="0"
+            style="max-width:600px;background:#ffffff;border-radius:14px;overflow:hidden;">
+            <tr>
+              <td style="background:linear-gradient(135deg,#f97316,#ea580c);
+                padding:30px;text-align:center;">
+                <h1 style="margin:0;color:#ffffff;font-size:26px;letter-spacing:1px;">
+                  INDIA COLLEGE FEST
+                </h1>
+                <p style="margin-top:8px;color:#ffedd5;">
+                  Event Approval Update
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:30px;text-align:center;">
+                <h2 style="margin-top:0;color:#111827;">
+                  Hi ${name || "Organizer"},
+                </h2>
+                <p style="font-size:15px;color:#4b5563;line-height:1.6;">
+                  Your event <strong>${title || "Event"}</strong> is <strong>${status}</strong>.
+                </p>
+                ${
+                  reason
+                    ? `<div style="margin:20px auto;padding:16px 18px;background:#f9fafb;border-radius:10px;max-width:420px;text-align:left;">
+                      <p style="margin:0;font-size:14px;color:#111827;"><strong>Reason:</strong> ${reason}</p>
+                    </div>`
+                    : ""
+                }
+                <p style="font-size:13px;color:#6b7280;margin-top:18px;">
+                  If you have questions, reply to this email.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="background:#f9fafb;padding:16px;text-align:center;">
+                <p style="margin:0;font-size:12px;color:#6b7280;">
+                  &copy; ${new Date().getFullYear()} India College Fest
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
+`;
+
 const mouTemplate = ({ name, email, date, signedAt }) => `
 <!DOCTYPE html>
 <html>
@@ -272,4 +380,11 @@ function fillTemplate(html, data) {
 }
 
 
-module.exports = { otpTemplate, organiserCredentialsTemplate, mouTemplate, fillTemplate };
+module.exports = {
+  otpTemplate,
+  organiserCredentialsTemplate,
+  organiserStatusTemplate,
+  eventStatusTemplate,
+  mouTemplate,
+  fillTemplate,
+};

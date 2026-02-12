@@ -6,7 +6,11 @@ const User = require("../../models/user");
 const AdminApproval = require("../../models/adminApproval");
 const generateRandomPassword = require("../../utils/istConverter");
 const { sendVerificationEmail } = require("../../config/nodeMailer");
-const { organiserCredentialsTemplate } = require("../../utils/emailTemplates");
+const {
+  organiserCredentialsTemplate,
+  organiserStatusTemplate,
+  eventStatusTemplate,
+} = require("../../utils/emailTemplates");
 const jwt = require("jsonwebtoken");
 
 const type = "category";
@@ -512,6 +516,19 @@ exports.approvalAction = async (req, res) => {
         approval.rejectedAt = new Date();
         await approval.save();
 
+        const user = await User.findById(approval.user_id);
+        if (user?.email) {
+          await sendVerificationEmail(
+            user.email,
+            "Organizer Application Rejected - India College Fest",
+            organiserStatusTemplate({
+              name: user.name,
+              status: "rejected",
+              reason: approval.reason,
+            }),
+          );
+        }
+
         return res.status(200).json({ message: "Organizer request rejected" });
       }
 
@@ -520,6 +537,19 @@ exports.approvalAction = async (req, res) => {
         approval.reason = reason || approval.reason;
         approval.resubmittedAt = new Date();
         await approval.save();
+
+        const user = await User.findById(approval.user_id);
+        if (user?.email) {
+          await sendVerificationEmail(
+            user.email,
+            "Organizer Application Needs Resubmission - India College Fest",
+            organiserStatusTemplate({
+              name: user.name,
+              status: "resubmitted",
+              reason: approval.reason,
+            }),
+          );
+        }
 
         return res.status(200).json({
           message: "Organizer request resubmitted successfully",
@@ -543,6 +573,19 @@ exports.approvalAction = async (req, res) => {
         event.approvalStatus = "approved";
         await event.save();
 
+        const user = await User.findById(event.user_id);
+        if (user?.email) {
+          await sendVerificationEmail(
+            user.email,
+            "Event Approved - India College Fest",
+            eventStatusTemplate({
+              name: user.name,
+              title: event.title,
+              status: "approved",
+            }),
+          );
+        }
+
         return res.status(200).json({ message: "Event approved successfully" });
       }
 
@@ -551,6 +594,20 @@ exports.approvalAction = async (req, res) => {
         event.rejectionReason = reason || "Rejected by admin";
         await event.save();
 
+        const user = await User.findById(event.user_id);
+        if (user?.email) {
+          await sendVerificationEmail(
+            user.email,
+            "Event Rejected - India College Fest",
+            eventStatusTemplate({
+              name: user.name,
+              title: event.title,
+              status: "rejected",
+              reason: event.rejectionReason,
+            }),
+          );
+        }
+
         return res.status(200).json({ message: "Event rejected successfully" });
       }
 
@@ -558,6 +615,20 @@ exports.approvalAction = async (req, res) => {
         event.approvalStatus = "resubmitted";
         event.rejectionReason = reason || event.rejectionReason;
         await event.save();
+
+        const user = await User.findById(event.user_id);
+        if (user?.email) {
+          await sendVerificationEmail(
+            user.email,
+            "Event Needs Resubmission - India College Fest",
+            eventStatusTemplate({
+              name: user.name,
+              title: event.title,
+              status: "resubmitted",
+              reason: event.rejectionReason,
+            }),
+          );
+        }
 
         return res.status(200).json({
           message: "Event resubmitted successfully",

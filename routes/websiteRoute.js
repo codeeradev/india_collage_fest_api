@@ -6,6 +6,8 @@ const { loginUser, verifyOtp, becomeAOrganiser, getOrganiser, getOrganiserEvents
 
 const { getCategory, getSubCategoriesByCategory } = require('../controlers/admin/website/categoryControler');
 const { addEvent, getEvent, getCitiesWebsite } = require('../controlers/admin/website/websiteControler');
+const { trackVisit } = require('../controlers/admin/website/visitController');
+const { getPublishedBlogs, getBlogBySlug } = require('../controlers/admin/website/blogController');
 
 const {
   getUserEvents,
@@ -17,8 +19,12 @@ const upload = require("../middleware/upload");
 router.post("/add-event", verifyToken, upload, addEvent)
 router.post("/login", loginUser),
 router.post("/verify-otp", verifyOtp),
+router.post("/track-visit", trackVisit),
 
 router.post("/become-a-organiser", upload, becomeAOrganiser),
+
+router.get("/blogs", getPublishedBlogs),
+router.get("/blogs/:slug", getBlogBySlug),
 
 router.get("/get-organiser", getOrganiser)
 router.get("/get-organiser-event", getOrganiserEvents)
