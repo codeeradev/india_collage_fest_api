@@ -1,3 +1,5 @@
+const os = require("os");
+const path = require("path");
 const message = require("../../constants/messages.json");
 
 const ALLOWED_ROLES = [1];
@@ -7,8 +9,43 @@ const DATE_PRESET_OPTIONS = new Set([
   "thisWeek",
   "thisWeekend",
   "nextWeek",
+  "thisMonth",
+  "nextMonth",
+  "next6months",
+]);
+
+const DATE_PRESET_TEXT = {
+  today: "today",
+  tomorrow: "tomorrow",
+  thisWeek: "this week",
+  thisWeekend: "this weekend",
+  nextWeek: "next week",
+  thisMonth: "this month",
+  nextMonth: "next month",
+  next6months: "next 6 months",
+};
+const SCRAPER_SUPPORTED_PRESETS = new Set([
+  "today",
+  "tomorrow",
+  "thisWeek",
+  "thisWeekend",
+  "nextWeek",
   "nextMonth",
 ]);
+const MONTH_NAMES = [
+  "january",
+  "february",
+  "march",
+  "april",
+  "may",
+  "june",
+  "july",
+  "august",
+  "september",
+  "october",
+  "november",
+  "december",
+];
 
 const formatDateInZone = (date, timeZone) => {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -51,6 +88,128 @@ const getDatePartsFromUnix = (unixSeconds, timeZone) => {
   };
 };
 
+const parseDateOnly = (value) => {
+  if (!value) return null;
+  const [yy, mm, dd] = String(value).split("-").map(Number);
+  if (!yy || !mm || !dd) return null;
+  const date = new Date(yy, mm - 1, dd);
+  if (Number.isNaN(date.getTime())) return null;
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+
+const addDays = (value, days) => {
+  const date = new Date(value);
+  date.setDate(date.getDate() + days);
+  return date;
+};
+
+const getWeekBounds = (baseDate) => {
+  const current = new Date(baseDate);
+  current.setHours(0, 0, 0, 0);
+  const day = current.getDay();
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+  const weekStart = addDays(current, mondayOffset);
+  const weekEnd = addDays(weekStart, 6);
+  return { weekStart, weekEnd };
+};
+
+const getNextWeekBounds = (baseDate) => {
+  const { weekStart } = getWeekBounds(baseDate);
+  const nextWeekStart = addDays(weekStart, 7);
+  const nextWeekEnd = addDays(nextWeekStart, 6);
+  return { nextWeekStart, nextWeekEnd };
+};
+
+const getWeekendBounds = (baseDate) => {
+  const today = new Date(baseDate);
+  today.setHours(0, 0, 0, 0);
+  const day = today.getDay();
+  const daysUntilSaturday = (6 - day + 7) % 7;
+  const saturday = addDays(today, daysUntilSaturday);
+  const sunday = addDays(saturday, 1);
+  return { saturday, sunday };
+};
+
+const getThisMonthBounds = (baseDate) => {
+  const year = baseDate.getFullYear();
+  const month = baseDate.getMonth();
+  const first = new Date(year, month, 1);
+  const last = new Date(year, month + 1, 0);
+  first.setHours(0, 0, 0, 0);
+  last.setHours(23, 59, 59, 999);
+  return { first, last };
+};
+
+const get6MonthBounds = (baseDate) => {
+  const year = baseDate.getFullYear();
+  const month = baseDate.getMonth();
+  const first = new Date(year, month, 1);
+  const last = new Date(year, month + 6, 0);
+  first.setHours(0, 0, 0, 0);
+  last.setHours(23, 59, 59, 999);
+  return { first, last };
+};
+
+const getNextMonthBounds = (baseDate) => {
+  const year = baseDate.getFullYear();
+  const month = baseDate.getMonth();
+  const first = new Date(year, month + 1, 1);
+  const last = new Date(year, month + 2, 0);
+  first.setHours(0, 0, 0, 0);
+  last.setHours(0, 0, 0, 0);
+  return { first, last };
+};
+
+const isDateInPreset = (eventDate, datePreset) => {
+  if (!datePreset) return true;
+  if (!eventDate) return true;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (datePreset === "today") {
+    return eventDate.getTime() === today.getTime();
+  }
+
+  if (datePreset === "tomorrow") {
+    const tomorrow = addDays(today, 1);
+    return eventDate.getTime() === tomorrow.getTime();
+  }
+
+  if (datePreset === "thisWeek") {
+    const { weekStart, weekEnd } = getWeekBounds(today);
+    return eventDate >= weekStart && eventDate <= weekEnd;
+  }
+
+  if (datePreset === "thisWeekend") {
+    const { saturday, sunday } = getWeekendBounds(today);
+    return eventDate.getTime() === saturday.getTime() || eventDate.getTime() === sunday.getTime();
+  }
+
+  if (datePreset === "thisMonth") {
+    const { first, last } = getThisMonthBounds(today);
+    return eventDate >= first && eventDate <= last;
+  }
+
+   if (datePreset === "next6months") {
+    const { first, last } = get6MonthBounds(today);
+    return eventDate >= first && eventDate <= last;
+   }
+
+  if (datePreset === "nextWeek") {
+    const { nextWeekStart, nextWeekEnd } = getNextWeekBounds(today);
+    return eventDate >= nextWeekStart && eventDate <= nextWeekEnd;
+  }
+
+  if (datePreset === "nextMonth") {
+    const { first, last } = getNextMonthBounds(today);
+    return eventDate >= first && eventDate <= last;
+  }
+
+  return true;
+};
+
 const toSlug = (value) =>
   String(value || "")
     .trim()
@@ -87,10 +246,91 @@ const normalizeScrapedEvent = (item, index, timeZone) => {
   };
 };
 
-const getScraper = async () => {
+const dedupeEvents = (events) => {
+  const seen = new Set();
+  return events.filter((event) => {
+    const key = `${String(event.title || "").toLowerCase()}|${String(event.address || "").toLowerCase()}|${String(event.start_date || "")}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
+const applyPresetDateFilter = (events, datePreset) => {
+  if (!datePreset) return events;
+
+  return events.filter((event) => {
+    const eventDate = parseDateOnly(event.start_date);
+    return isDateInPreset(eventDate, datePreset);
+  });
+};
+
+const getMonthQuerySuffixes = (monthsToCover) => {
+  const list = [];
+  const baseDate = new Date();
+  baseDate.setDate(1);
+
+  for (let offset = 0; offset < monthsToCover; offset += 1) {
+    const monthDate = new Date(baseDate.getFullYear(), baseDate.getMonth() + offset, 1);
+    list.push(`${MONTH_NAMES[monthDate.getMonth()]} ${monthDate.getFullYear()}`);
+  }
+
+  return list;
+};
+
+const buildAttemptPlan = (query, datePreset) => {
+  const plan = [];
+  const addAttempt = (label, q, options = {}) => {
+    const sortedOptions = Object.keys(options)
+      .sort()
+      .reduce((acc, key) => {
+        acc[key] = options[key];
+        return acc;
+      }, {});
+    const key = `${label}|${q}|${JSON.stringify(sortedOptions)}`;
+    if (plan.some((item) => item.key === key)) return;
+    plan.push({ key, label, query: q, options });
+  };
+
+  if (datePreset) {
+    if (SCRAPER_SUPPORTED_PRESETS.has(datePreset)) {
+      addAttempt("preset_filter", query, { [datePreset]: true });
+    }
+    addAttempt("query_with_date_text", `${query} ${DATE_PRESET_TEXT[datePreset]}`, {});
+
+    if (datePreset === "next6months") {
+      for (const monthSuffix of getMonthQuerySuffixes(6)) {
+        addAttempt("month_query", `${query} ${monthSuffix}`, {});
+      }
+    }
+  }
+
+  addAttempt("plain_query", query, {});
+
+  const hasEventsWord = /\bevents?\b/i.test(query);
+  if (hasEventsWord) {
+    const withoutEvents = query.replace(/\bevents?\b/i, "").trim();
+    if (withoutEvents) {
+      addAttempt("reordered_query", `events ${withoutEvents}`, {});
+      addAttempt("reordered_query", `${withoutEvents} events`, {});
+    }
+  } else {
+    addAttempt("add_events_prefix", `events ${query}`, {});
+  }
+
+  return plan;
+};
+
+const configureScraperRuntime = () => {
   if (!process.env.CRAWLEE_LOG_LEVEL) {
     process.env.CRAWLEE_LOG_LEVEL = "WARNING";
   }
+  process.env.CRAWLEE_PURGE_ON_START = "true";
+  process.env.CRAWLEE_STORAGE_DIR = path.join(os.tmpdir(), "indiafest-crawlee");
+};
+
+const getScraper = async () => {
+  configureScraperRuntime();
   const mod = await import("google-events-scraper");
   return mod.default;
 };
@@ -111,36 +351,47 @@ exports.fetchGoogleEventsPreview = async (req, res) => {
     if (datePreset && !DATE_PRESET_OPTIONS.has(datePreset)) {
       return res.status(400).json({
         message:
-          "Invalid datePreset. Allowed: today, tomorrow, thisWeek, thisWeekend, nextWeek, nextMonth",
+          "Invalid datePreset. Allowed: today, tomorrow, thisWeek, thisWeekend, nextWeek, nextMonth, thisMonth, next6months",
       });
     }
 
-    const parsedLimit = Number(req.body?.limit ?? req.body?.maxResults);
-    const limit =
-      Number.isFinite(parsedLimit) && parsedLimit > 0
-        ? Math.min(Math.floor(parsedLimit), 200)
-        : 50;
-
     const timeZone = String(req.body?.timeZone || "Asia/Kolkata").trim();
-
-    const options = {};
-    if (datePreset) {
-      options[datePreset] = true;
-    }
+    const attempts = buildAttemptPlan(query, datePreset);
 
     const Scraper = await getScraper();
     const scraper = new Scraper();
 
-    console.log(`Fetching Google events with query="${query}", datePreset="${datePreset}", timeZone="${timeZone}", limit=${limit}`);
-    const results = await scraper.Scrape(query, options);
+    let rawEvents = [];
+    let totalScraped = 0;
+    const successfulAttempts = [];
 
-console.log(results);
-    const rawEvents = Array.isArray(results) ? results : [];
-    console.log(rawEvents);
+    for (const attempt of attempts) {
+      console.log(
+        `Google scrape attempt="${attempt.label}" query="${attempt.query}" options="${JSON.stringify(attempt.options)}"`,
+      );
 
-    const previewEvents = rawEvents
-      .slice(0, limit)
-      .map((item, index) => normalizeScrapedEvent(item, index, timeZone));
+      const result = await scraper.Scrape(attempt.query, attempt.options);
+      const list = Array.isArray(result) ? result : [];
+      if (list.length > 0) {
+        successfulAttempts.push({
+          label: attempt.label,
+          query: attempt.query,
+          scraped: list.length,
+        });
+        totalScraped += list.length;
+        rawEvents.push(...list);
+      }
+    }
+
+    const normalized = rawEvents.map((item, index) =>
+      normalizeScrapedEvent(item, index, timeZone),
+    );
+    const deduped = dedupeEvents(normalized);
+    const finalEvents = applyPresetDateFilter(deduped, datePreset);
+    const firstSuccessfulAttempt = successfulAttempts[0] || null;
+    const strategy = successfulAttempts.length
+      ? [...new Set(successfulAttempts.map((item) => item.label))].join(",")
+      : "no_results";
 
     return res.status(200).json({
       message: "Google events fetched successfully",
@@ -148,10 +399,17 @@ console.log(results);
         query,
         datePreset: datePreset || null,
         timeZone,
-        count: previewEvents.length,
-        totalScraped: rawEvents.length,
+        count: finalEvents.length,
+        totalScraped,
+        uniqueScraped: deduped.length,
+        strategy,
+        queryUsed: firstSuccessfulAttempt?.query || query,
+        fallbackUsed: successfulAttempts.some(
+          (item) => item.label !== "preset_filter" && item.label !== "plain_query",
+        ),
+        attempts: successfulAttempts,
       },
-      events: previewEvents,
+      events: finalEvents,
     });
   } catch (error) {
     console.error(error);
