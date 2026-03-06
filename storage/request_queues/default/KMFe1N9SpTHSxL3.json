@@ -1,0 +1,9 @@
+{
+	"id": "KMFe1N9SpTHSxL3",
+	"json": "{\"id\":\"KMFe1N9SpTHSxL3\",\"url\":\"https://www.google.com/search?q=events+mumbai&ibp=htl;events#htivrt=events&htichips=date:week\",\"loadedUrl\":\"https://www.google.com/search?q=events+mumbai&ibp=htl;events#htivrt=events&htichips=date:week&htidocid=&fpstate=tldetail\",\"uniqueKey\":\"https://www.google.com/search?ibp=htl%3Bevents&q=events+mumbai\",\"method\":\"GET\",\"noRetry\":false,\"retryCount\":1,\"errorMessages\":[\"locator.boundingBox: Timeout 30000ms exceeded.\\nCall log:\\n\\u001b[2m  - waiting for locator('div[jsname=\\\"CaV2mb\\\"]')\\u001b[22m\\n\\n    at PlaywrightCrawler.requestHandler (D:\\\\IndiaFestCollage\\\\IndiaFestBackend\\\\node_modules\\\\google-events-scraper\\\\dist\\\\main.js:40:61)\"],\"headers\":{},\"userData\":{\"__crawlee\":{\"state\":4}},\"handledAt\":\"2026-03-06T06:24:52.704Z\"}",
+	"method": "GET",
+	"orderNo": null,
+	"retryCount": 1,
+	"uniqueKey": "https://www.google.com/search?ibp=htl%3Bevents&q=events+mumbai",
+	"url": "https://www.google.com/search?q=events+mumbai&ibp=htl;events#htivrt=events&htichips=date:week"
+}

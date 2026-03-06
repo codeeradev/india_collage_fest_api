@@ -6,9 +6,13 @@ const City = require("../../../models/city");
 const User = require("../../../models/user");
 
 const cityType = "Cities";
+const getEventSourceByRole = (roleId) =>
+  [1, 2, 3].includes(Number(roleId)) ? "organiser" : "user";
+
 exports.addEvent = async (req, res) => {
   try {
-    const userId = req.user;
+    const authUser = req.user;
+    const userId = authUser?._id || authUser;
     const {
       title,
       description,
@@ -29,9 +33,13 @@ exports.addEvent = async (req, res) => {
       ? `/assets/uploads/${req.files.image[0].filename}`
       : null;
 
-    const user = await User.findById(userId);
+    const user = authUser?.roleId ? authUser : await User.findById(userId);
+    if (!user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
 
     const approvalStatus = user.roleId === 1 ? "approved" : "pending";
+    const source = getEventSourceByRole(user.roleId);
 
     const newEvent = await Event.create({
       title,
@@ -51,6 +59,7 @@ exports.addEvent = async (req, res) => {
       sub_category: subCategory,
       isFeatured: false,
       visibility,
+      source,
     });
 
     if ([1, 2, 3].includes(user.roleId)) {

@@ -40,6 +40,9 @@ const {
   getBlogs,
   getBlogById,
 } = require("../controlers/admin/blogController");
+const {
+  fetchGoogleEventsPreview,
+} = require("../controlers/admin/googleEventController");
 
 const {
   upsertBaseTemplate,
@@ -76,6 +79,7 @@ router.post(
 );
 
 router.post("/approval-action", approvalAction);
+router.post("/events/google/fetch-preview", verifyToken, fetchGoogleEventsPreview);
 
 router.post("/mou/update-base-template", verifyToken, upsertBaseTemplate);
 

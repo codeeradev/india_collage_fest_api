@@ -1,0 +1,9 @@
+{
+	"id": "CzYYEe7VHgwmiwj",
+	"json": "{\"id\":\"CzYYEe7VHgwmiwj\",\"url\":\"https://www.google.com/search?q=event+in+mumbai&ibp=htl;events#htivrt=events&htichips=date:week\",\"loadedUrl\":\"https://www.google.com/search?q=event+in+mumbai&ibp=htl;events#htivrt=events&htichips=date:week&htidocid=&fpstate=tldetail\",\"uniqueKey\":\"https://www.google.com/search?ibp=htl%3Bevents&q=event+in+mumbai\",\"method\":\"GET\",\"noRetry\":false,\"retryCount\":0,\"errorMessages\":[],\"headers\":{},\"userData\":{\"__crawlee\":{\"state\":4}},\"handledAt\":\"2026-03-06T06:01:39.198Z\"}",
+	"method": "GET",
+	"orderNo": null,
+	"retryCount": 0,
+	"uniqueKey": "https://www.google.com/search?ibp=htl%3Bevents&q=event+in+mumbai",
+	"url": "https://www.google.com/search?q=event+in+mumbai&ibp=htl;events#htivrt=events&htichips=date:week"
+}

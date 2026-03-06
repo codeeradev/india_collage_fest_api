@@ -30,6 +30,11 @@ const eventSchema = new mongoose.Schema(
     approvalStatus: { type: String, enum: ["approved", "rejected", "pending", "resubmitted"] },
     rejectionReason:String,
     eventMode: String,
+    source: {
+      type: String,
+      enum: ["organiser", "user", "google"],
+      default: "user",
+    },
     visibility: Boolean,
     isFeatured: { type: Boolean, default: false },
   },

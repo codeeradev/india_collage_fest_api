@@ -1,0 +1,9 @@
+{
+	"id": "bb6iGyavttDYoR8",
+	"json": "{\"id\":\"bb6iGyavttDYoR8\",\"url\":\"https://www.google.com/search?q=things+to+do+in+delhi&ibp=htl;events#htivrt=events\",\"loadedUrl\":\"https://www.google.com/search?q=things+to+do+in+delhi&ibp=htl;events#htivrt=events&htidocid=L2F1dGhvcml0eS9ob3Jpem9uL2NsdXN0ZXJlZF9ldmVudC8yMDI2LTAzLTA4fDEyMTk4MzU3MjY4ODQ2NzY5NzI0&fpstate=tldetail\",\"uniqueKey\":\"https://www.google.com/search?ibp=htl%3Bevents&q=things+to+do+in+delhi\",\"method\":\"GET\",\"noRetry\":false,\"retryCount\":0,\"errorMessages\":[],\"headers\":{},\"userData\":{\"__crawlee\":{\"state\":4}},\"handledAt\":\"2026-03-06T05:58:47.983Z\"}",
+	"method": "GET",
+	"orderNo": null,
+	"retryCount": 0,
+	"uniqueKey": "https://www.google.com/search?ibp=htl%3Bevents&q=things+to+do+in+delhi",
+	"url": "https://www.google.com/search?q=things+to+do+in+delhi&ibp=htl;events#htivrt=events"
+}
