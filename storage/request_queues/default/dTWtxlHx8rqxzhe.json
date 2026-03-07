@@ -1,0 +1,9 @@
+{
+	"id": "dTWtxlHx8rqxzhe",
+	"json": "{\"id\":\"dTWtxlHx8rqxzhe\",\"url\":\"https://www.google.com/search?q=events+kolkata&ibp=htl;events#htivrt=events\",\"uniqueKey\":\"https://www.google.com/search?ibp=htl%3Bevents&q=events+kolkata\",\"method\":\"GET\",\"noRetry\":false,\"retryCount\":0,\"errorMessages\":[],\"headers\":{},\"userData\":{}}",
+	"method": "GET",
+	"orderNo": 1772867144118,
+	"retryCount": 0,
+	"uniqueKey": "https://www.google.com/search?ibp=htl%3Bevents&q=events+kolkata",
+	"url": "https://www.google.com/search?q=events+kolkata&ibp=htl;events#htivrt=events"
+}

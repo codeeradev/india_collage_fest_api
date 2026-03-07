@@ -1,6 +1,7 @@
 const os = require("os");
 const path = require("path");
 const message = require("../../constants/messages.json");
+const GoogleEventsScraper = require("../../utils/googleEventsScraper");
 
 const ALLOWED_ROLES = [1];
 const DATE_PRESET_OPTIONS = new Set([
@@ -184,7 +185,10 @@ const isDateInPreset = (eventDate, datePreset) => {
 
   if (datePreset === "thisWeekend") {
     const { saturday, sunday } = getWeekendBounds(today);
-    return eventDate.getTime() === saturday.getTime() || eventDate.getTime() === sunday.getTime();
+    return (
+      eventDate.getTime() === saturday.getTime() ||
+      eventDate.getTime() === sunday.getTime()
+    );
   }
 
   if (datePreset === "thisMonth") {
@@ -192,10 +196,10 @@ const isDateInPreset = (eventDate, datePreset) => {
     return eventDate >= first && eventDate <= last;
   }
 
-   if (datePreset === "next6months") {
+  if (datePreset === "next6months") {
     const { first, last } = get6MonthBounds(today);
     return eventDate >= first && eventDate <= last;
-   }
+  }
 
   if (datePreset === "nextWeek") {
     const { nextWeekStart, nextWeekEnd } = getNextWeekBounds(today);
@@ -235,7 +239,9 @@ const normalizeScrapedEvent = (item, index, timeZone) => {
     title,
     description: String(item?.description || "").trim(),
     image: String(item?.imageUrl || "").trim(),
-    address: String(item?.location?.address || item?.location?.name || "").trim(),
+    address: String(
+      item?.location?.address || item?.location?.name || "",
+    ).trim(),
     start_date: start.date,
     end_date: end.date || start.date,
     start_time: start.time,
@@ -271,8 +277,14 @@ const getMonthQuerySuffixes = (monthsToCover) => {
   baseDate.setDate(1);
 
   for (let offset = 0; offset < monthsToCover; offset += 1) {
-    const monthDate = new Date(baseDate.getFullYear(), baseDate.getMonth() + offset, 1);
-    list.push(`${MONTH_NAMES[monthDate.getMonth()]} ${monthDate.getFullYear()}`);
+    const monthDate = new Date(
+      baseDate.getFullYear(),
+      baseDate.getMonth() + offset,
+      1,
+    );
+    list.push(
+      `${MONTH_NAMES[monthDate.getMonth()]} ${monthDate.getFullYear()}`,
+    );
   }
 
   return list;
@@ -296,7 +308,11 @@ const buildAttemptPlan = (query, datePreset) => {
     if (SCRAPER_SUPPORTED_PRESETS.has(datePreset)) {
       addAttempt("preset_filter", query, { [datePreset]: true });
     }
-    addAttempt("query_with_date_text", `${query} ${DATE_PRESET_TEXT[datePreset]}`, {});
+    addAttempt(
+      "query_with_date_text",
+      `${query} ${DATE_PRESET_TEXT[datePreset]}`,
+      {},
+    );
 
     if (datePreset === "next6months") {
       for (const monthSuffix of getMonthQuerySuffixes(6)) {
@@ -321,18 +337,41 @@ const buildAttemptPlan = (query, datePreset) => {
   return plan;
 };
 
+const toPositiveInt = (value, fallback) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : fallback;
+};
+
+const getScraperMode = () => {
+  const mode = String(process.env.GOOGLE_EVENTS_SCRAPER_MODE || "")
+    .trim()
+    .toLowerCase();
+  return mode === "patched" ? "patched" : "package";
+};
+
 const configureScraperRuntime = () => {
   if (!process.env.CRAWLEE_LOG_LEVEL) {
     process.env.CRAWLEE_LOG_LEVEL = "WARNING";
   }
-  process.env.CRAWLEE_PURGE_ON_START = "true";
-  process.env.CRAWLEE_STORAGE_DIR = path.join(os.tmpdir(), "indiafest-crawlee");
+  if (!process.env.CRAWLEE_PERSIST_STORAGE) {
+    process.env.CRAWLEE_PERSIST_STORAGE = "false";
+  }
+  if (!process.env.CRAWLEE_PURGE_ON_START) {
+    process.env.CRAWLEE_PURGE_ON_START = "false";
+  }
+  if (!process.env.CRAWLEE_STORAGE_DIR) {
+    process.env.CRAWLEE_STORAGE_DIR = path.join(os.tmpdir(), "indiafest-crawlee");
+  }
 };
 
 const getScraper = async () => {
   configureScraperRuntime();
+  const mode = getScraperMode();
+  if (mode === "patched") {
+    return { Scraper: GoogleEventsScraper, mode };
+  }
   const mod = await import("google-events-scraper");
-  return mod.default;
+  return { Scraper: mod.default, mode };
 };
 
 exports.fetchGoogleEventsPreview = async (req, res) => {
@@ -356,30 +395,77 @@ exports.fetchGoogleEventsPreview = async (req, res) => {
     }
 
     const timeZone = String(req.body?.timeZone || "Asia/Kolkata").trim();
-    const attempts = buildAttemptPlan(query, datePreset);
+    const maxAttempts = toPositiveInt(process.env.GOOGLE_EVENTS_MAX_ATTEMPTS, 4);
+    const attempts = buildAttemptPlan(query, datePreset).slice(0, maxAttempts);
 
-    const Scraper = await getScraper();
-    const scraper = new Scraper();
+    const { Scraper, mode: scraperMode } = await getScraper();
+    const scraper = new Scraper({
+      requestHandlerTimeoutSecs: toPositiveInt(
+        process.env.GOOGLE_EVENTS_HANDLER_TIMEOUT_SECS,
+        220,
+      ),
+      navigationTimeoutSecs: toPositiveInt(
+        process.env.GOOGLE_EVENTS_NAVIGATION_TIMEOUT_SECS,
+        45,
+      ),
+      maxRequestRetries: Math.max(
+        0,
+        Number.isFinite(Number(process.env.GOOGLE_EVENTS_MAX_RETRIES))
+          ? Math.floor(Number(process.env.GOOGLE_EVENTS_MAX_RETRIES))
+          : 1,
+      ),
+      maxEventsPerQuery: toPositiveInt(process.env.GOOGLE_EVENTS_MAX_EVENTS, 80),
+      maxScrollSteps: toPositiveInt(process.env.GOOGLE_EVENTS_SCROLL_STEPS, 36),
+      scrollWaitMs: toPositiveInt(process.env.GOOGLE_EVENTS_SCROLL_WAIT_MS, 250),
+      scrollMaxDurationMs: toPositiveInt(
+        process.env.GOOGLE_EVENTS_SCROLL_TIMEOUT_MS,
+        25000,
+      ),
+      launchOptions: {
+        headless: true,
+        args: [
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-dev-shm-usage",
+          "--disable-gpu",
+          "--disable-blink-features=AutomationControlled",
+        ],
+      },
+    });
 
     let rawEvents = [];
     let totalScraped = 0;
     const successfulAttempts = [];
+    const failedAttempts = [];
 
     for (const attempt of attempts) {
       console.log(
         `Google scrape attempt="${attempt.label}" query="${attempt.query}" options="${JSON.stringify(attempt.options)}"`,
       );
 
-      const result = await scraper.Scrape(attempt.query, attempt.options);
-      const list = Array.isArray(result) ? result : [];
-      if (list.length > 0) {
-        successfulAttempts.push({
+      try {
+        const result = await scraper.Scrape(attempt.query, attempt.options);
+        const list = Array.isArray(result) ? result : [];
+        if (list.length > 0) {
+          successfulAttempts.push({
+            label: attempt.label,
+            query: attempt.query,
+            scraped: list.length,
+          });
+          totalScraped += list.length;
+          rawEvents.push(...list);
+        }
+      } catch (attemptError) {
+        const reason = String(attemptError?.message || "Unknown scraper error");
+        failedAttempts.push({
           label: attempt.label,
           query: attempt.query,
-          scraped: list.length,
+          error: reason,
         });
-        totalScraped += list.length;
-        rawEvents.push(...list);
+        console.error(
+          `Google scrape attempt failed label="${attempt.label}" query="${attempt.query}"`,
+          attemptError,
+        );
       }
     }
 
@@ -405,9 +491,13 @@ exports.fetchGoogleEventsPreview = async (req, res) => {
         strategy,
         queryUsed: firstSuccessfulAttempt?.query || query,
         fallbackUsed: successfulAttempts.some(
-          (item) => item.label !== "preset_filter" && item.label !== "plain_query",
+          (item) =>
+            item.label !== "preset_filter" && item.label !== "plain_query",
         ),
+        attempted: attempts.length,
+        scraperMode,
         attempts: successfulAttempts,
+        errors: failedAttempts,
       },
       events: finalEvents,
     });
