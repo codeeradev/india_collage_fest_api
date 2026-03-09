@@ -1,5 +1,6 @@
 const message = require("../../constants/messages.json");
 const GoogleEventsScraper = require("../../utils/googleEventsScraper");
+const User = require("../../models/user");
 
 const ALLOWED_ROLES = [1];
 const DATE_PRESET_OPTIONS = new Set([
@@ -347,6 +348,21 @@ exports.fetchGoogleEventsPreview = async (req, res) => {
       return res.status(403).json({ message: "Access denied" });
     }
 
+    const adminUser = await User.findById(req.user?._id).select(
+      "roleId +serpApiKey",
+    );
+    if (!adminUser || Number(adminUser.roleId) !== 1) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    const serpApiKey = String(adminUser.serpApiKey || "").trim();
+    if (!serpApiKey) {
+      return res.status(400).json({
+        message:
+          "SERP API key is not configured. Please update admin profile first.",
+      });
+    }
+
     const query = String(req.body?.query || "").trim();
     if (!query) {
       return res.status(400).json({ message: "query is required" });
@@ -370,6 +386,7 @@ exports.fetchGoogleEventsPreview = async (req, res) => {
         process.env.GOOGLE_EVENTS_REQUEST_TIMEOUT_MS,
         20000,
       ),
+      apiKey: serpApiKey,
       maxEventsPerQuery: toPositiveInt(process.env.GOOGLE_EVENTS_MAX_EVENTS, 80),
       maxPages: toPositiveInt(process.env.GOOGLE_EVENTS_MAX_PAGES, 3),
       hl: String(process.env.GOOGLE_EVENTS_HL || "en").trim() || "en",
@@ -448,7 +465,7 @@ exports.fetchGoogleEventsPreview = async (req, res) => {
     console.error(error);
     return res.status(500).json({
       message:
-        "Failed to fetch Google events. Configure SERPAPI_API_KEY and verify outbound HTTPS access.",
+        "Failed to fetch Google events. Verify admin SERP API key in profile and outbound HTTPS access.",
       error: message.server_error,
     });
   }

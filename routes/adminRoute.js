@@ -109,7 +109,7 @@ router.get("/get-blog/:id", verifyToken, getBlogById);
 router.get("/get-category", getCategory);
 router.get("/get-city", getCity);
 router.get("/get-event", getEvent);
-router.get("/get-profile/:userId", getProfile);
+router.get("/get-profile/:userId", verifyToken, getProfile);
 
 router.get("/get-users", getUsers);
 router.get("/get-event", getEvent);

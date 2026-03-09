@@ -17,6 +17,11 @@ const userSchema = new mongoose.Schema(
     phone_verified_at: { type: Date, default: null },
     image: String,
     password: String,
+    serpApiKey: {
+      type: String,
+      default: "",
+      select: false,
+    },
     bannerImage: String,
     facebook_page_id: {
       type: mongoose.Schema.Types.ObjectId,

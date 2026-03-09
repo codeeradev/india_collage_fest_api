@@ -643,10 +643,11 @@ exports.approvalAction = async (req, res) => {
 
 exports.editProfile = async (req, res) => {
   try {
-    const userId = req.user;
+    const userId = req.user?._id || req.user;
+    const requesterRoleId = Number(req.user?.roleId);
 
-    const { name, phone, location, password } = req.body;
-    const user = await User.findById(userId);
+    const { name, phone, location, password, serpApiKey } = req.body;
+    const user = await User.findById(userId).select("+serpApiKey");
     if (!user) {
       return res.status(404).json({
         status: false,
@@ -661,6 +662,15 @@ exports.editProfile = async (req, res) => {
     if (name) user.name = name;
     if (location) user.location = location;
     if (password) user.password = password;
+    if (serpApiKey !== undefined) {
+      if (requesterRoleId !== 1 || Number(user.roleId) !== 1) {
+        return res.status(403).json({
+          status: false,
+          message: "Only admin can update SERP API key",
+        });
+      }
+      user.serpApiKey = String(serpApiKey).trim();
+    }
 
     /** image upload */
     if (req.files?.image) {
@@ -672,11 +682,15 @@ exports.editProfile = async (req, res) => {
     }
 
     await user.save();
+    const responseUser = user.toObject();
+    if (!(requesterRoleId === 1 && Number(user.roleId) === 1)) {
+      delete responseUser.serpApiKey;
+    }
 
     res.status(200).json({
       status: true,
       message: "Profile updated successfully",
-      data: user,
+      data: responseUser,
     });
   } catch (error) {
     console.error(error);
@@ -690,13 +704,14 @@ exports.editProfile = async (req, res) => {
 exports.getProfile = async (req, res) => {
   try {
     const { userId } = req.params;
+    const requesterRoleId = Number(req.user?.roleId);
 
     const profile = await User.findOne({
       _id: userId,
       roleId: { $nin: [4, 5] },
       status: true,
     })
-      .select("-otp -__v")
+      .select("-otp -__v +serpApiKey")
       .populate({
         path: "location",
         select: "_id city",
@@ -706,10 +721,16 @@ exports.getProfile = async (req, res) => {
         message: "Profile not found",
       });
     }
+    const responseProfile = profile.toObject();
+    const canViewSerpApiKey =
+      requesterRoleId === 1 && Number(profile.roleId) === 1;
+    if (!canViewSerpApiKey) {
+      delete responseProfile.serpApiKey;
+    }
 
     return res.status(200).json({
       message: "Profile fetched successfully",
-      profile,
+      profile: responseProfile,
     });
   } catch (error) {
     console.error(error);
