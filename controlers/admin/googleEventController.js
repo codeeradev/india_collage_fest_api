@@ -1,5 +1,3 @@
-const os = require("os");
-const path = require("path");
 const message = require("../../constants/messages.json");
 const GoogleEventsScraper = require("../../utils/googleEventsScraper");
 
@@ -342,38 +340,6 @@ const toPositiveInt = (value, fallback) => {
   return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : fallback;
 };
 
-const getScraperMode = () => {
-  const mode = String(process.env.GOOGLE_EVENTS_SCRAPER_MODE || "")
-    .trim()
-    .toLowerCase();
-  return mode === "patched" ? "patched" : "package";
-};
-
-const configureScraperRuntime = () => {
-  if (!process.env.CRAWLEE_LOG_LEVEL) {
-    process.env.CRAWLEE_LOG_LEVEL = "WARNING";
-  }
-  if (!process.env.CRAWLEE_PERSIST_STORAGE) {
-    process.env.CRAWLEE_PERSIST_STORAGE = "false";
-  }
-  if (!process.env.CRAWLEE_PURGE_ON_START) {
-    process.env.CRAWLEE_PURGE_ON_START = "false";
-  }
-  if (!process.env.CRAWLEE_STORAGE_DIR) {
-    process.env.CRAWLEE_STORAGE_DIR = path.join(os.tmpdir(), "indiafest-crawlee");
-  }
-};
-
-const getScraper = async () => {
-  configureScraperRuntime();
-  const mode = getScraperMode();
-  if (mode === "patched") {
-    return { Scraper: GoogleEventsScraper, mode };
-  }
-  const mod = await import("google-events-scraper");
-  return { Scraper: mod.default, mode };
-};
-
 exports.fetchGoogleEventsPreview = async (req, res) => {
   try {
     const roleId = Number(req.user?.roleId);
@@ -398,39 +364,16 @@ exports.fetchGoogleEventsPreview = async (req, res) => {
     const maxAttempts = toPositiveInt(process.env.GOOGLE_EVENTS_MAX_ATTEMPTS, 4);
     const attempts = buildAttemptPlan(query, datePreset).slice(0, maxAttempts);
 
-    const { Scraper, mode: scraperMode } = await getScraper();
-    const scraper = new Scraper({
-      requestHandlerTimeoutSecs: toPositiveInt(
-        process.env.GOOGLE_EVENTS_HANDLER_TIMEOUT_SECS,
-        220,
-      ),
-      navigationTimeoutSecs: toPositiveInt(
-        process.env.GOOGLE_EVENTS_NAVIGATION_TIMEOUT_SECS,
-        45,
-      ),
-      maxRequestRetries: Math.max(
-        0,
-        Number.isFinite(Number(process.env.GOOGLE_EVENTS_MAX_RETRIES))
-          ? Math.floor(Number(process.env.GOOGLE_EVENTS_MAX_RETRIES))
-          : 1,
+    const scraperMode = "serpapi";
+    const scraper = new GoogleEventsScraper({
+      requestTimeoutMs: toPositiveInt(
+        process.env.GOOGLE_EVENTS_REQUEST_TIMEOUT_MS,
+        20000,
       ),
       maxEventsPerQuery: toPositiveInt(process.env.GOOGLE_EVENTS_MAX_EVENTS, 80),
-      maxScrollSteps: toPositiveInt(process.env.GOOGLE_EVENTS_SCROLL_STEPS, 36),
-      scrollWaitMs: toPositiveInt(process.env.GOOGLE_EVENTS_SCROLL_WAIT_MS, 250),
-      scrollMaxDurationMs: toPositiveInt(
-        process.env.GOOGLE_EVENTS_SCROLL_TIMEOUT_MS,
-        25000,
-      ),
-      launchOptions: {
-        headless: true,
-        args: [
-          "--no-sandbox",
-          "--disable-setuid-sandbox",
-          "--disable-dev-shm-usage",
-          "--disable-gpu",
-          "--disable-blink-features=AutomationControlled",
-        ],
-      },
+      maxPages: toPositiveInt(process.env.GOOGLE_EVENTS_MAX_PAGES, 3),
+      hl: String(process.env.GOOGLE_EVENTS_HL || "en").trim() || "en",
+      gl: String(process.env.GOOGLE_EVENTS_GL || "in").trim() || "in",
     });
 
     let rawEvents = [];
@@ -505,7 +448,7 @@ exports.fetchGoogleEventsPreview = async (req, res) => {
     console.error(error);
     return res.status(500).json({
       message:
-        "Failed to fetch Google events. Verify Playwright browser install with: npx playwright install chromium",
+        "Failed to fetch Google events. Configure SERPAPI_API_KEY and verify outbound HTTPS access.",
       error: message.server_error,
     });
   }
