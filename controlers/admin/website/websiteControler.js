@@ -12,6 +12,8 @@ const getLimitValue = (value) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
 };
+const escapeRegex = (value) =>
+  String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 exports.addEvent = async (req, res) => {
   try {
@@ -239,11 +241,15 @@ exports.getEvent = async (req, res) => {
 
 exports.getCitiesWebsite = async (req, res) => {
   try {
-    const { cityId, page, limit } = req.query;
+    const { cityId, page, limit, search } = req.query;
     const pageNum = Number(page) || 1;
     const limitNum = Number(limit);
     const safeLimit = Number.isFinite(limitNum) && limitNum > 0 ? limitNum : 0;
     const skip = safeLimit ? (pageNum - 1) * safeLimit : 0;
+    const normalizedSearch = String(search || "").trim();
+    const searchRegex = normalizedSearch
+      ? new RegExp(escapeRegex(normalizedSearch), "i")
+      : null;
 
     // ==========================
     // IF CITY SELECTED → ONLY THAT CITY
@@ -280,10 +286,15 @@ exports.getCitiesWebsite = async (req, res) => {
     }
 
     // ==========================
-    // NORMAL CITY LIST (PAGINATED + POPULAR FIRST)
+    // NORMAL CITY LIST (PAGINATED + POPULAR FIRST + SEARCH)
     // ==========================
+    const cityMatch = { is_active: true };
+    if (searchRegex) {
+      cityMatch.$or = [{ city: searchRegex }, { description: searchRegex }];
+    }
+
     const pipeline = [
-      { $match: { is_active: true } },
+      { $match: cityMatch },
       {
         $lookup: {
           from: "events",
