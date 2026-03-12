@@ -35,6 +35,11 @@ const eventSchema = new mongoose.Schema(
       enum: ["organiser", "user", "google"],
       default: "user",
     },
+    googleEventId: {
+      type: String,
+      default: "",
+      index: true,
+    },
     visibility: Boolean,
     isFeatured: { type: Boolean, default: false },
   },

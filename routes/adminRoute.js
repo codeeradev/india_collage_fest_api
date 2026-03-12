@@ -43,6 +43,10 @@ const {
 const {
   fetchGoogleEventsPreview,
 } = require("../controlers/admin/googleEventController");
+const {
+  addEventCsv,
+  importGoogleEvents,
+} = require("../controlers/admin/eventImportController");
 
 const {
   upsertBaseTemplate,
@@ -68,6 +72,7 @@ router.post("/add-sub-category", upload, addSubCategory);
 router.post("/edit-sub-category/:id", upload, editSubCategory);
 router.post("/add-city", upload, addCity);
 router.post("/add-city-csv", upload, addCityCsv);
+router.post("/add-event-csv", verifyToken, upload, addEventCsv);
 router.post("/edit-city/:cityId", upload, editCity);
 router.get("/user/dashboard", verifyToken, getUserDashboard);
 router.post(
@@ -80,6 +85,7 @@ router.post(
 
 router.post("/approval-action", approvalAction);
 router.post("/events/google/fetch-preview", verifyToken, fetchGoogleEventsPreview);
+router.post("/events/google/import", verifyToken, importGoogleEvents);
 
 router.post("/mou/update-base-template", verifyToken, upsertBaseTemplate);
 
