@@ -740,10 +740,22 @@ exports.getProfile = async (req, res) => {
   }
 };
 
+const parseNonNegativeLimit = (value) => {
+  if (value === undefined) return { hasValue: false, value: 0 };
+  if (value === null || value === "") return { hasValue: true, value: 0 };
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return { hasValue: true, value: null };
+  }
+
+  return { hasValue: true, value: Math.floor(parsed) };
+};
+
 exports.updateUserPermissions = async (req, res) => {
   try {
     const { id } = req.params;
-    const { permissions } = req.body;
+    const { permissions, eventUploadLimit, socialUploadLimit } = req.body;
 
     const adminRole = req.user.roleId; // from auth middleware
 
@@ -751,8 +763,27 @@ exports.updateUserPermissions = async (req, res) => {
       return res.status(403).json({ message: "Only admin allowed" });
     }
 
-    if (!permissions || typeof permissions !== "object") {
+    const hasPermissions = permissions !== undefined;
+    if (hasPermissions && (typeof permissions !== "object" || Array.isArray(permissions))) {
       return res.status(400).json({ message: "Invalid permissions format" });
+    }
+
+    const parsedEventLimit = parseNonNegativeLimit(eventUploadLimit);
+    const parsedSocialLimit = parseNonNegativeLimit(socialUploadLimit);
+    if (parsedEventLimit.value === null || parsedSocialLimit.value === null) {
+      return res.status(400).json({
+        message: "eventUploadLimit and socialUploadLimit must be non-negative numbers",
+      });
+    }
+
+    if (
+      !hasPermissions &&
+      !parsedEventLimit.hasValue &&
+      !parsedSocialLimit.hasValue
+    ) {
+      return res.status(400).json({
+        message: "Nothing to update. Provide permissions and/or limits",
+      });
     }
 
     const user = await User.findById(id);
@@ -761,14 +792,84 @@ exports.updateUserPermissions = async (req, res) => {
       return res.status(404).json({ message: "Organizer not found" });
     }
 
-    // overwrite permissions cleanly
-    user.permissions = new Map(Object.entries(permissions));
+    if (hasPermissions) {
+      // overwrite permissions cleanly
+      user.permissions = new Map(Object.entries(permissions));
+    }
+    if (parsedEventLimit.hasValue) {
+      user.eventUploadLimit = parsedEventLimit.value;
+    }
+    if (parsedSocialLimit.hasValue) {
+      user.socialUploadLimit = parsedSocialLimit.value;
+    }
 
     await user.save();
 
     return res.json({
       message: "Permissions updated successfully",
       permissions: Object.fromEntries(user.permissions),
+      eventUploadLimit: user.eventUploadLimit || 0,
+      socialUploadLimit: user.socialUploadLimit || 0,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.editUserByAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, email, phone, status, permissions, eventUploadLimit, socialUploadLimit } =
+      req.body;
+
+    if (Number(req.user?.roleId) !== 1) {
+      return res.status(403).json({ message: "Only admin allowed" });
+    }
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (Number(user.roleId) === 1) {
+      return res.status(403).json({ message: "Admin user cannot be edited here" });
+    }
+
+    if (name !== undefined) user.name = String(name).trim();
+    if (email !== undefined) user.email = String(email).trim().toLowerCase();
+    if (phone !== undefined && phone !== "") user.phone = Number(phone);
+    if (status !== undefined) user.status = Boolean(status);
+
+    if (permissions !== undefined) {
+      if (typeof permissions !== "object" || Array.isArray(permissions)) {
+        return res.status(400).json({ message: "Invalid permissions format" });
+      }
+      user.permissions = new Map(Object.entries(permissions));
+    }
+
+    const parsedEventLimit = parseNonNegativeLimit(eventUploadLimit);
+    const parsedSocialLimit = parseNonNegativeLimit(socialUploadLimit);
+    if (parsedEventLimit.value === null || parsedSocialLimit.value === null) {
+      return res.status(400).json({
+        message: "eventUploadLimit and socialUploadLimit must be non-negative numbers",
+      });
+    }
+    if (parsedEventLimit.hasValue) {
+      user.eventUploadLimit = parsedEventLimit.value;
+    }
+    if (parsedSocialLimit.hasValue) {
+      user.socialUploadLimit = parsedSocialLimit.value;
+    }
+
+    await user.save();
+
+    const responseUser = user.toObject();
+    delete responseUser.password;
+
+    return res.status(200).json({
+      message: "User updated successfully",
+      user: responseUser,
     });
   } catch (error) {
     console.error(error);

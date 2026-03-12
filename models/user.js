@@ -10,6 +10,16 @@ const userSchema = new mongoose.Schema(
       of: Boolean,
       default: {},   // admin fills this
     },
+    eventUploadLimit: {
+      type: Number,
+      default: 0, // 0 = unlimited
+      min: 0,
+    },
+    socialUploadLimit: {
+      type: Number,
+      default: 0, // 0 = unlimited
+      min: 0,
+    },
     phone: Number, // it is without +91 or u can say country code
     status: Boolean,
     email: String,

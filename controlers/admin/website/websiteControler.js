@@ -8,6 +8,10 @@ const User = require("../../../models/user");
 const cityType = "Cities";
 const getEventSourceByRole = (roleId) =>
   [1, 2, 3].includes(Number(roleId)) ? "organiser" : "user";
+const getLimitValue = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
+};
 
 exports.addEvent = async (req, res) => {
   try {
@@ -36,6 +40,17 @@ exports.addEvent = async (req, res) => {
     const user = authUser?.roleId ? authUser : await User.findById(userId);
     if (!user) {
       return res.status(401).json({ message: "Unauthorized" });
+    }
+    if (Number(user.roleId) === 3) {
+      const eventUploadLimit = getLimitValue(user.eventUploadLimit);
+      if (eventUploadLimit > 0) {
+        const existingEvents = await Event.countDocuments({ user_id: userId });
+        if (existingEvents >= eventUploadLimit) {
+          return res.status(403).json({
+            message: `Event upload limit reached (${eventUploadLimit}). Please contact admin.`,
+          });
+        }
+      }
     }
 
     const approvalStatus = user.roleId === 1 ? "approved" : "pending";

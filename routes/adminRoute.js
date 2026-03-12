@@ -18,6 +18,7 @@ const {
   editProfile,
   getProfile,
   getUsers,
+  editUserByAdmin,
 } = require("../controlers/admin/adminControler");
 
 const { previewMouPdf } = require("../utils/mouPdf");
@@ -102,6 +103,7 @@ router.post("/organizer/mou/send-otp", verifyToken, sendMouOtp);
 router.post("/organizer/mou/verify-otp", verifyToken, verifyMouOtp);
 
 router.post("/organizer/permissions/:id", verifyToken, updateUserPermissions);
+router.post("/edit-user/:id", verifyToken, editUserByAdmin);
 
 router.get("/get-mou-versions/:mouId", getMouVersions);
 

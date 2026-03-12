@@ -7,6 +7,10 @@ const User = require("../../models/user");
 
 const GRAPH_URL = "https://graph.facebook.com/v20.0";
 const OAUTH_URL = "https://www.facebook.com/v20.0/dialog/oauth";
+const getLimitValue = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
+};
 
 /* ---------------- TOKEN ENCRYPTION ---------------- */
 
@@ -437,6 +441,18 @@ const buildImageUrl = (req, imagePath) => {
 
 exports.createPosterRequest = async (req, res) => {
   try {
+    if (Number(req.user?.roleId) === 3) {
+      const socialUploadLimit = getLimitValue(req.user.socialUploadLimit);
+      if (socialUploadLimit > 0) {
+        const submittedPosts = await SocialPost.countDocuments({ userId: req.user._id });
+        if (submittedPosts >= socialUploadLimit) {
+          return res.status(403).json({
+            message: `Social upload limit reached (${socialUploadLimit}). Please contact admin.`,
+          });
+        }
+      }
+    }
+
     const image = req.files?.image?.[0]?.filename
       ? `/assets/uploads/${req.files.image[0].filename}`
       : null;
